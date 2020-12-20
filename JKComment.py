@@ -53,6 +53,8 @@ class JKComment:
             begintime = watchsession_info['program']['beginTime']
             endtime = watchsession_info['program']['endTime']
             print(f"コメントを {watchsession_info['program']['title']} から取得します。")
+            print(f"番組開始時刻: {datetime.fromtimestamp(begintime).strftime('%Y/%m/%d %H:%M:%S')} " +
+                  f"番組終了時刻: {datetime.fromtimestamp(endtime).strftime('%Y/%m/%d %H:%M:%S')}")
 
             # コメントセッションへの接続情報を取得
             commentsession_info = self.__getCommentSessionInfo(watchsession_info)
@@ -165,11 +167,11 @@ class JKComment:
         if objformat != 'xml' and objformat != 'json':
             raise Exception('不正なフォーマットです。')
 
-        # 放送 ID らを取得
+        # 番組 ID らを取得
         # 指定された日付内に放送された全ての番組からコメントを取得するので複数入ることがある
         live_ids = self.__getNicoLiveID(self.jikkyo_id, self.date)
         if live_ids is None:
-            raise Exception('放送 ID を取得できませんでした。')
+            raise Exception('番組 ID を取得できませんでした。')
 
         # コメントを取得
         chat = []
@@ -238,7 +240,7 @@ class JKComment:
 
         def get(user_session):
 
-            # 放送 ID から HTML を取得
+            # 番組 ID から HTML を取得
             url = 'https://live2.nicovideo.jp/watch/' + live_id
             cookie = { 'user_session': user_session }
             response = requests.get(url, cookies=cookie).content
@@ -321,7 +323,7 @@ class JKComment:
             return None
 
 
-    #  ニコニコチャンネル/コミュニティの ID から、指定された日付に放送されたニコ生の放送 ID を取得する
+    #  ニコニコチャンネル/コミュニティの ID から、指定された日付に放送されたニコ生の番組 ID を取得する
     def __getNicoLiveID(self, jikkyo_id, date):
 
         # 実際のニコニコチャンネル/コミュニティの ID と種別を取得
@@ -356,19 +358,19 @@ class JKComment:
                     # beginAt が現在時刻より後のものを弾く（取得できないので）
                     if beginAt < datetime.now().astimezone():
 
-                        # 取得終了時刻が現在時刻より後（未来）
-                        # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合 
-                        # astimezone() しないと比較できない👈重要
-                        date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
-                        if date_235959 > datetime.now().astimezone():
-
-                            print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
-                            print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
-                            print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
-                            print('-' * shutil.get_terminal_size().columns)  # 行区切り
-
-                        # 放送 ID を返す
+                        # 番組 ID を返す
                         result.append('lv' + str(item['id']))
+
+            # 取得終了時刻が現在時刻より後（未来）の場合、当然ながら全部取得できないので注意を出す
+            # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合 
+            # astimezone() しないと比較できない👈重要
+            date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
+            if date_235959 > datetime.now().astimezone():
+
+                print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
+                print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
+                print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
+                print('-' * shutil.get_terminal_size().columns)  # 行区切り
 
             # 全部回しても取得できなかったら None
             if len(result) == 0:
