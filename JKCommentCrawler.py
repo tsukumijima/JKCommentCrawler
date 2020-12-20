@@ -1,11 +1,11 @@
 
-import dateutil.parser
-from pprint import pprint
-import lxml.etree as ET
-import xml.dom.minidom as minidom
 import argparse
+import dateutil.parser
 import json
+import lxml.etree as ET
 import os
+from pprint import pprint
+import xml.dom.minidom as minidom
 
 import config
 from JKComment import JKComment
