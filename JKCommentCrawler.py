@@ -50,7 +50,6 @@ def main():
         f.write(prettify(comment_xmlobject))
 
     # TODO: スレッド単位ではなく日付ごとに取得できるようにする
-    # TODO: /nicoad とかの特殊コメントを弾く
     # TODO: コミュニティにも対応する
 
 

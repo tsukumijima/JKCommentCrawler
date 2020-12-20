@@ -7,6 +7,7 @@ import os
 import requests
 import websocket
 import lxml.etree as ET
+import re
 from bs4 import BeautifulSoup
 
 
@@ -198,6 +199,10 @@ class JKComment:
                     
                 # コメント情報
                 if 'chat' in response:
+
+                    # /nicoad など特殊コメントは追加せずに次のループへ
+                    if re.match(r'/[a-z]+ ', response['chat']['content']):
+                        continue
 
                     # コメントを追加
                     chat_child.append(response)
