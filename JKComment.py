@@ -14,6 +14,19 @@ import websocket
 
 class JKComment:
 
+    # 実況チャンネル表
+    jikkyo_id_table = {
+        'jk1':   {'type': 'channel', 'id': 'ch2646436'},
+        'jk2':   {'type': 'channel', 'id': 'ch2646437'},
+        'jk4':   {'type': 'channel', 'id': 'ch2646438'},
+        'jk5':   {'type': 'channel', 'id': 'ch2646439'},
+        'jk6':   {'type': 'channel', 'id': 'ch2646440'},
+        'jk7':   {'type': 'channel', 'id': 'ch2646441'},
+        'jk8':   {'type': 'channel', 'id': 'ch2646442'},
+        'jk9':   {'type': 'channel', 'id': 'ch2646485'},
+        'jk211': {'type': 'channel', 'id': 'ch2646846'},
+    }
+
     def __init__(self, jikkyo_id, date, nicologin_mail, nicologin_password):
 
         # 実況 ID
@@ -187,6 +200,12 @@ class JKComment:
             return chat
 
 
+    # 実況 ID リストを取得
+    @staticmethod
+    def getJikkyoIDList():
+        return JKComment.jikkyo_id_table.keys()
+
+
     # ニコニコにログインする
     def __login(self, force = False):
 
@@ -297,21 +316,8 @@ class JKComment:
 
     # スクリーンネームの実況 ID から、実際のニコニコチャンネル/コミュニティの ID と種別を取得する
     def __getRealNicoJikkyoID(self, jikkyo_id):
-
-        table = {
-            'jk1':   {'type': 'channel', 'id': 'ch2646436'},
-            'jk2':   {'type': 'channel', 'id': 'ch2646437'},
-            'jk4':   {'type': 'channel', 'id': 'ch2646438'},
-            'jk5':   {'type': 'channel', 'id': 'ch2646439'},
-            'jk6':   {'type': 'channel', 'id': 'ch2646440'},
-            'jk7':   {'type': 'channel', 'id': 'ch2646441'},
-            'jk8':   {'type': 'channel', 'id': 'ch2646442'},
-            'jk9':   {'type': 'channel', 'id': 'ch2646485'},
-            'jk211': {'type': 'channel', 'id': 'ch2646846'},
-        }
-
-        if jikkyo_id in table:
-            return table[jikkyo_id]
+        if jikkyo_id in JKComment.jikkyo_id_table:
+            return JKComment.jikkyo_id_table[jikkyo_id]
         else:
             return None
 
