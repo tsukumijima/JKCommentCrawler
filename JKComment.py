@@ -169,8 +169,8 @@ class JKComment:
         # コメントの投稿時間の日付と、指定された日付が一致するコメントのみ残す
         # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
         print('合計コメント数: ' + str(len(chat)))
-        print(f"{self.date.strftime('%Y-%m-%d')} 以外に投稿されたコメントを除外しています…")
-        chat = [chatitem for chatitem in chat if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y-%m-%d') == self.date.strftime('%Y-%m-%d')]
+        print(f"{self.date.strftime('%Y/%m/%d')} 以外に投稿されたコメントを除外しています…")
+        chat = [chatitem for chatitem in chat if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y/%m/%d') == self.date.strftime('%Y/%m/%d')]
 
         print('最終コメント数: ' + str(len(chat)))
 
@@ -345,8 +345,8 @@ class JKComment:
                 endAt = datetime.fromisoformat(item['endAt'])
 
                 # beginAt または endAt の日付と date の日付が一致するなら
-                if (beginAt.strftime('%Y-%m-%d') == date.strftime('%Y-%m-%d') or
-                    endAt.strftime('%Y-%m-%d') == date.strftime('%Y-%m-%d')):
+                if (beginAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d') or
+                    endAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d')):
 
                     # beginAt が現在時刻より後のものを弾く（取得できないので）
                     if beginAt < datetime.now().astimezone():
@@ -357,9 +357,9 @@ class JKComment:
                         date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
                         if date_235959 > datetime.now().astimezone():
 
-                            print(f"注意: {date.strftime('%Y-%m-%d')} 中の放送が終わっていない番組があります。")
+                            print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
                             print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
-                            print(f"{date.strftime('%Y-%m-%d')} 中の放送が終わった後に再取得することを推奨します。")
+                            print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
                             print('-' * shutil.get_terminal_size().columns)  # 行区切り
 
                         # 放送 ID を返す
