@@ -5,6 +5,7 @@ import json
 import lxml.etree as ET
 import os
 from pprint import pprint
+import shutil
 import xml.dom.minidom as minidom
 
 import config
@@ -12,6 +13,9 @@ from JKComment import JKComment
 
 
 def main():
+
+    # 行区切り
+    print('-' * shutil.get_terminal_size().columns)
 
     # 引数解析
     parser = argparse.ArgumentParser(description = 'ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class = argparse.RawTextHelpFormatter)
@@ -39,12 +43,16 @@ def main():
         return xml.rstrip()
 
     # ファイル名・フォルダ
-    os.makedirs(f'{config.jkcomment_folder}/{jikkyo_id}/{date.strftime("%Y")}/', exist_ok=True)
-    filename = f'{config.jkcomment_folder}/{jikkyo_id}/{date.strftime("%Y")}/{date.strftime("%Y%m%d")}.nicojk'
+    os.makedirs(f"{config.jkcomment_folder.rstrip('/')}/{jikkyo_id}/{date.strftime('%Y')}/", exist_ok=True)
+    filename = f"{config.jkcomment_folder.rstrip('/')}/{jikkyo_id}/{date.strftime('%Y')}/{date.strftime('%Y%m%d')}.nicojk"
 
     # コメントデータ（XML）を保存
     with open(filename, 'w') as f:
         f.write(prettify(comment_xmlobject))
+        print(f"ログを {filename} に保存しました。")
+
+    # 行区切り
+    print('-' * shutil.get_terminal_size().columns)
 
     # TODO: コミュニティにも対応する
 

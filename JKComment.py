@@ -8,6 +8,7 @@ import pickle
 from pprint import pprint
 import re
 import requests
+import shutil
 import websocket
 
 
@@ -39,7 +40,7 @@ class JKComment:
             # 開始・終了時間
             begintime = watchsession_info['program']['beginTime']
             endtime = watchsession_info['program']['endTime']
-            print(f"コメントを {watchsession_info['program']['title']} から取得します")
+            print(f"コメントを {watchsession_info['program']['title']} から取得します。")
 
             # コメントセッションへの接続情報を取得
             commentsession_info = self.__getCommentSessionInfo(watchsession_info)
@@ -128,19 +129,20 @@ class JKComment:
                         # 最後のコメ番を更新
                         last_comeban = chat_child[-1]['chat']['no']
 
-
                 # chat に chat_child の内容を取得
                 # 最後のコメントから遡るので、さっき取得したコメントは既に取得したコメントよりも前に連結する
                 chat = chat_child + chat
                 
-                print(str(len(chat)) + '件のコメントを取得しました')
+                # 標準出力を上書きする
+                # 参考: https://hacknote.jp/archives/51679/
+                print('\r合計 ' + str(len(chat)) + ' 件のコメントを取得しました。', end='')
 
                 # コメ番が 1 ならすべてのコメントを取得したと判断して抜ける
                 if int(chat[0]['chat']['no']) == 1:
+                    print() # 改行を出力
                     break
 
-            print('コメント数: ' + str(len(chat)))
-            print(f"コメントを {watchsession_info['program']['title']} から取得しました")
+            print(f"コメントを {watchsession_info['program']['title']} から取得しました。")
 
             # 番組単体で取得したコメントを返す
             return chat
@@ -161,12 +163,13 @@ class JKComment:
         chat = []
         for live_id in live_ids:
             chat = chat + getCommentOne(live_id)
+            print('-' * shutil.get_terminal_size().columns)
 
         # コメントのうち指定された日付以外に投稿されているものを弾く
         # コメントの投稿時間の日付と、指定された日付が一致するコメントのみ残す
         # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
         print('合計コメント数: ' + str(len(chat)))
-        print('指定された日付以外のコメントを除外しています…')
+        print(f"{self.date.strftime('%Y-%m-%d')} 以外に投稿されたコメントを除外しています…")
         chat = [chatitem for chatitem in chat if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y-%m-%d') == self.date.strftime('%Y-%m-%d')]
 
         print('最終コメント数: ' + str(len(chat)))
@@ -247,6 +250,10 @@ class JKComment:
 
     # コメントセッションへの接続情報を取得
     def __getCommentSessionInfo(self, watchsession_info):
+
+        if ('webSocketUrl' not in watchsession_info['site']['relive'] or
+            watchsession_info['site']['relive']['webSocketUrl'] == ''):
+            raise Exception('コメントセッションへの接続用 WebSocket の取得に失敗しました。')
 
         # User-Agent は標準のだと弾かれる
         watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], header={
@@ -333,15 +340,30 @@ class JKComment:
 
             for item in items:
 
-                # ISO8601 フォーマットを datetime に変換してからフォーマット
-                beginAt = datetime.fromisoformat(item['beginAt']).strftime('%Y-%m-%d')
-                endAt = datetime.fromisoformat(item['endAt']).strftime('%Y-%m-%d')
+                # ISO8601 フォーマットを datetime に変換しておく
+                beginAt = datetime.fromisoformat(item['beginAt'])
+                endAt = datetime.fromisoformat(item['endAt'])
 
                 # beginAt または endAt の日付と date の日付が一致するなら
-                if beginAt == date.strftime('%Y-%m-%d') or endAt == date.strftime('%Y-%m-%d'):
+                if (beginAt.strftime('%Y-%m-%d') == date.strftime('%Y-%m-%d') or
+                    endAt.strftime('%Y-%m-%d') == date.strftime('%Y-%m-%d')):
 
-                    # 放送 ID を返す
-                    result.append('lv' + str(item['id']))
+                    # beginAt が現在時刻より後のものを弾く（取得できないので）
+                    if beginAt < datetime.now().astimezone():
+
+                        # 取得終了時刻が現在時刻より後（未来）
+                        # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合 
+                        # astimezone() しないと比較できない👈重要
+                        date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
+                        if date_235959 > datetime.now().astimezone():
+
+                            print(f"注意: {date.strftime('%Y-%m-%d')} 中の放送が終わっていない番組があります。")
+                            print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
+                            print(f"{date.strftime('%Y-%m-%d')} 中の放送が終わった後に再取得することを推奨します。")
+                            print('-' * shutil.get_terminal_size().columns)  # 行区切り
+
+                        # 放送 ID を返す
+                        result.append('lv' + str(item['id']))
 
             # 全部回しても取得できなかったら None
             if len(result) == 0:
