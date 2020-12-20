@@ -13,17 +13,26 @@ import websocket
 
 class JKComment:
 
-    # 実況チャンネル表
+    # 実況 ID とチャンネル/コミュニティ ID の対照表
     jikkyo_id_table = {
-        'jk1':   {'type': 'channel', 'id': 'ch2646436'},
-        'jk2':   {'type': 'channel', 'id': 'ch2646437'},
-        'jk4':   {'type': 'channel', 'id': 'ch2646438'},
-        'jk5':   {'type': 'channel', 'id': 'ch2646439'},
-        'jk6':   {'type': 'channel', 'id': 'ch2646440'},
-        'jk7':   {'type': 'channel', 'id': 'ch2646441'},
-        'jk8':   {'type': 'channel', 'id': 'ch2646442'},
-        'jk9':   {'type': 'channel', 'id': 'ch2646485'},
-        'jk211': {'type': 'channel', 'id': 'ch2646846'},
+        'jk1': {'type': 'channel', 'id': 'ch2646436'},
+        'jk2': {'type': 'channel', 'id': 'ch2646437'},
+        'jk4': {'type': 'channel', 'id': 'ch2646438'},
+        'jk5': {'type': 'channel', 'id': 'ch2646439'},
+        'jk6': {'type': 'channel', 'id': 'ch2646440'},
+        'jk7': {'type': 'channel', 'id': 'ch2646441'},
+        'jk8': {'type': 'channel', 'id': 'ch2646442'},
+        'jk9': {'type': 'channel', 'id': 'ch2646485'},
+        'jk101': {'type': 'community', 'id': 'co5214081'},
+        'jk103': {'type': 'community', 'id': 'co5175227'},
+        'jk141': {'type': 'community', 'id': 'co5175341'},
+        'jk151': {'type': 'community', 'id': 'co5175345'},
+        'jk161': {'type': 'community', 'id': 'co5176119'},
+        'jk171': {'type': 'community', 'id': 'co5176122'},
+        'jk181': {'type': 'community', 'id': 'co5176125'},
+        'jk211': {'type': 'channel',  'id': 'ch2646846'},
+        'jk222': {'type': 'community', 'id': 'co5193029'},
+        'jk234': {'type': 'community', 'id': 'co5217651'},
     }
 
     def __init__(self, jikkyo_id, date, nicologin_mail, nicologin_password):
