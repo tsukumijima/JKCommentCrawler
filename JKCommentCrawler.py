@@ -1,5 +1,6 @@
 
 import argparse
+import configparser
 import dateutil.parser
 import json
 import lxml.etree as ET
@@ -8,9 +9,7 @@ from pprint import pprint
 import shutil
 import xml.dom.minidom as minidom
 
-import config
 from JKComment import JKComment
-
 
 def main():
 
@@ -27,10 +26,21 @@ def main():
     jikkyo_id = args.Channel.rstrip()
     date = dateutil.parser.parse(args.Date.rstrip())
 
+    # 設定読み込み
+    config_ini = os.path.dirname(os.path.abspath(__file__)) + '/JKCommentCrawler.ini'
+    if not os.path.exists(config_ini):
+        raise Exception('JKCommentCrawler.ini が存在しません。\nJKCommentCrawler.example.ini からコピーし、適宜設定を変更してもう一度実行してください。')
+    config = configparser.ConfigParser()
+    config.read(config_ini, encoding='UTF-8')
+    jkcomment_folder = config.get('Default', 'jkcomment_folder').rstrip('/')
+    nicologin_mail = config.get('Default', 'nicologin_mail')
+    nicologin_password = config.get('Default', 'nicologin_password')
+
+
     def get(jikkyo_id, date):
 
         # インスタンスを作成
-        jkcomment = JKComment(jikkyo_id, date, config.nicologin_mail, config.nicologin_password)
+        jkcomment = JKComment(jikkyo_id, date, nicologin_mail, nicologin_password)
         
         # コメントデータ（XML）を取得
         comment_xmlobject = jkcomment.getComment(objformat='xml')
@@ -45,8 +55,8 @@ def main():
             return xml.rstrip()
 
         # ファイル名・フォルダ
-        os.makedirs(f"{config.jkcomment_folder.rstrip('/')}/{jikkyo_id}/{date.strftime('%Y')}/", exist_ok=True)
-        filename = f"{config.jkcomment_folder.rstrip('/')}/{jikkyo_id}/{date.strftime('%Y')}/{date.strftime('%Y%m%d')}.nicojk"
+        os.makedirs(f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/", exist_ok=True)
+        filename = f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/{date.strftime('%Y%m%d')}.nicojk"
 
         # コメントデータ（XML）を保存
         with open(filename, 'w') as f:
@@ -55,6 +65,7 @@ def main():
 
         # 行区切り
         print('-' * shutil.get_terminal_size().columns)
+
 
     # コメントデータ（XML）を全てのチャンネル分取得
     if jikkyo_id.lower() == 'all':

@@ -11,7 +11,6 @@ import requests
 import shutil
 import websocket
 
-
 class JKComment:
 
     # 実況チャンネル表
