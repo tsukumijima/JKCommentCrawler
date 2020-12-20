@@ -325,6 +325,7 @@ class JKComment:
             api_response = json.loads(requests.get(api_baseurl + jikkyo_data['id'][2:]).content)  # ch とか co を削ぎ落としてから
 
             # アイテムをソート
+            # 参考: https://note.nkmk.me/python-dict-list-sort/
             items = api_response['data']['items']
             items = sorted(items, key=lambda x: x['beginAt'])  # 開始時刻昇順でソート
 
