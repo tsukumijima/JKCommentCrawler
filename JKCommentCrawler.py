@@ -1,5 +1,5 @@
 
-from datetime import datetime
+import dateutil.parser
 from pprint import pprint
 import lxml.etree as ET
 import xml.dom.minidom as minidom
@@ -21,16 +21,13 @@ def main():
 
     # 引数
     jikkyo_id = args.Channel.rstrip()
-    date = datetime.strptime(args.Date.rstrip(), '%Y-%m-%d')
+    date = dateutil.parser.parse(args.Date.rstrip())
 
     # インスタンスを作成
     jkcomment = JKComment(jikkyo_id, date, config.nicologin_mail, config.nicologin_password)
 
-    # コメントデータ（JSON）を取得
-    comment_jsonobject = jkcomment.getComment()
-    
     # コメントデータ（XML）を取得
-    comment_xmlobject = jkcomment.convertToXML(comment_jsonobject)
+    comment_xmlobject = jkcomment.getComment(objformat='xml')
 
     # XML をフォーマットする
     # lxml.etree を使うことで属性の順序を保持できる
@@ -49,7 +46,6 @@ def main():
     with open(filename, 'w') as f:
         f.write(prettify(comment_xmlobject))
 
-    # TODO: スレッド単位ではなく日付ごとに取得できるようにする
     # TODO: コミュニティにも対応する
 
 
