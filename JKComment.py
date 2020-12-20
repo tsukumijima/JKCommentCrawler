@@ -324,9 +324,13 @@ class JKComment:
             api_baseurl = 'https://public.api.nicovideo.jp/v1/channel/channelapp/content/lives.json?sort=startedAt&page=1&channelId='
             api_response = json.loads(requests.get(api_baseurl + jikkyo_data['id'][2:]).content)  # ch とか co を削ぎ落としてから
 
+            # アイテムをソート
+            items = api_response['data']['items']
+            items = sorted(items, key=lambda x: x['beginAt'])  # 開始時刻昇順でソート
+
             result = []
 
-            for item in api_response['data']['items']:
+            for item in items:
 
                 # ISO8601 フォーマットを datetime に変換してからフォーマット
                 beginAt = datetime.fromisoformat(item['beginAt']).strftime('%Y-%m-%d')
@@ -342,7 +346,6 @@ class JKComment:
             if len(result) == 0:
                 return None
             else:
-                result.sort()  # ソートする
                 return result
 
         # ニコニコミュニティのみ
