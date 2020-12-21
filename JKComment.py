@@ -1,6 +1,7 @@
 
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from timeout_decorator import timeout, TimeoutError
 import json
 import lxml.etree as ET
 import os
@@ -113,8 +114,16 @@ class JKComment:
                 # 1000 コメント取得できるまでループ
                 while True:
 
+                    @timeout(5)  # 5 秒でタイムアウト
+                    def getResponse():
+                        return json.loads(commentsession.recv())
+
                     # 受信データを取得
-                    response = json.loads(commentsession.recv())
+                    try:
+                        response = getResponse()
+                    # タイムアウトした（＝これ以上コメントは返ってこない）のでループを抜ける
+                    except TimeoutError:
+                        break
 
                     # スレッド情報
                     if 'thread' in response:
