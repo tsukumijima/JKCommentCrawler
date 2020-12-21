@@ -201,7 +201,7 @@ class JKComment:
             chat = chat + getCommentOne(live_id)
         
         print('-' * shutil.get_terminal_size().columns)
-        print('合計コメント数: ' + str(len(chat)))
+        print(f"合計コメント数: {str(len(chat))} 件")
 
         # コメントのうち /emotion や /nicoad などの運営コメントを弾く
         # if not re.match … の部分を if re.match … にすると運営コメントだけ取り出せる
@@ -215,7 +215,7 @@ class JKComment:
         print(f"{self.date.strftime('%Y/%m/%d')} 以外に投稿されたコメントを除外しています…")
         chat = [chatitem for chatitem in chat if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y/%m/%d') == self.date.strftime('%Y/%m/%d')]
 
-        print('最終コメント数: ' + str(len(chat)))
+        print(f"最終コメント数: {str(len(chat))} 件")
 
         # xml の場合
         if objformat == 'xml':
