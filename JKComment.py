@@ -15,24 +15,24 @@ class JKComment:
 
     # 実況 ID とチャンネル/コミュニティ ID の対照表
     jikkyo_id_table = {
-        'jk1': {'type': 'channel', 'id': 'ch2646436'},
-        'jk2': {'type': 'channel', 'id': 'ch2646437'},
-        'jk4': {'type': 'channel', 'id': 'ch2646438'},
-        'jk5': {'type': 'channel', 'id': 'ch2646439'},
-        'jk6': {'type': 'channel', 'id': 'ch2646440'},
-        'jk7': {'type': 'channel', 'id': 'ch2646441'},
-        'jk8': {'type': 'channel', 'id': 'ch2646442'},
-        'jk9': {'type': 'channel', 'id': 'ch2646485'},
-        'jk101': {'type': 'community', 'id': 'co5214081'},
-        'jk103': {'type': 'community', 'id': 'co5175227'},
-        'jk141': {'type': 'community', 'id': 'co5175341'},
-        'jk151': {'type': 'community', 'id': 'co5175345'},
-        'jk161': {'type': 'community', 'id': 'co5176119'},
-        'jk171': {'type': 'community', 'id': 'co5176122'},
-        'jk181': {'type': 'community', 'id': 'co5176125'},
-        'jk211': {'type': 'channel',  'id': 'ch2646846'},
-        'jk222': {'type': 'community', 'id': 'co5193029'},
-        'jk234': {'type': 'community', 'id': 'co5217651'},
+        'jk1': {'type': 'channel', 'id': 'ch2646436', 'name': 'NHK総合'},
+        'jk2': {'type': 'channel', 'id': 'ch2646437', 'name': 'NHKEテレ'},
+        'jk4': {'type': 'channel', 'id': 'ch2646438', 'name': '日本テレビ'},
+        'jk5': {'type': 'channel', 'id': 'ch2646439', 'name': 'テレビ朝日'},
+        'jk6': {'type': 'channel', 'id': 'ch2646440', 'name': 'TBSテレビ'},
+        'jk7': {'type': 'channel', 'id': 'ch2646441', 'name': 'テレビ東京'},
+        'jk8': {'type': 'channel', 'id': 'ch2646442', 'name': 'フジテレビ'},
+        'jk9': {'type': 'channel', 'id': 'ch2646485', 'name': 'TOKYO MX'},
+        'jk101': {'type': 'community', 'id': 'co5214081', 'name': 'NHK BS1'},
+        'jk103': {'type': 'community', 'id': 'co5175227', 'name': 'NHK BSプレミアム'},
+        'jk141': {'type': 'community', 'id': 'co5175341', 'name': 'BS日テレ'},
+        'jk151': {'type': 'community', 'id': 'co5175345', 'name': 'BS朝日'},
+        'jk161': {'type': 'community', 'id': 'co5176119', 'name': 'BS-TBS'},
+        'jk171': {'type': 'community', 'id': 'co5176122', 'name': 'BSテレ東'},
+        'jk181': {'type': 'community', 'id': 'co5176125', 'name': 'BSフジ'},
+        'jk211': {'type': 'channel',   'id': 'ch2646846', 'name': 'BS11'},
+        'jk222': {'type': 'community', 'id': 'co5193029', 'name': 'BS12'},
+        'jk234': {'type': 'community', 'id': 'co5217651', 'name': 'グリーンチャンネル'},
     }
 
     def __init__(self, jikkyo_id, date, nicologin_mail, nicologin_password):
@@ -61,8 +61,9 @@ class JKComment:
             # 開始・終了時間
             begintime = watchsession_info['program']['beginTime']
             endtime = watchsession_info['program']['endTime']
-            print(f"コメントを {watchsession_info['program']['title']} から取得します。")
-            print(f"番組開始時刻: {datetime.fromtimestamp(begintime).strftime('%Y/%m/%d %H:%M:%S')} " +
+            print('-' * shutil.get_terminal_size().columns)
+            print(f"番組タイトル: {watchsession_info['program']['title']}")
+            print(f"番組開始時刻: {datetime.fromtimestamp(begintime).strftime('%Y/%m/%d %H:%M:%S')}  " +
                   f"番組終了時刻: {datetime.fromtimestamp(endtime).strftime('%Y/%m/%d %H:%M:%S')}")
 
             # コメントセッションへの接続情報を取得
@@ -170,13 +171,13 @@ class JKComment:
         # フォーマット
         objformat = objformat.lower()
         if objformat != 'xml' and objformat != 'json':
-            raise Exception('不正なフォーマットです。')
+            raise JKCommentFormatError('不正なフォーマットです。')
 
         # 番組 ID らを取得
         # 指定された日付内に放送された全ての番組からコメントを取得するので複数入ることがある
         live_ids = self.__getNicoLiveID(self.jikkyo_id, self.date)
         if live_ids is None:
-            raise Exception('番組 ID を取得できませんでした。')
+            raise JKCommentLiveIDError('番組 ID を取得できませんでした。')
 
         # コメントを取得
         chat = []
@@ -217,6 +218,15 @@ class JKComment:
     @staticmethod
     def getJikkyoIDList():
         return JKComment.jikkyo_id_table.keys()
+
+
+    # 実況チャンネル名を取得
+    @staticmethod
+    def getJikkyoChannelName(jikkyo_id):
+        if jikkyo_id in JKComment.jikkyo_id_table:
+            return JKComment.jikkyo_id_table[jikkyo_id]['name']
+        else:
+            return None
 
 
     # ニコニコにログインする
@@ -275,7 +285,7 @@ class JKComment:
             
         # もう一度ログインしたのに非ログイン状態なら raise
         if watchsession_info['user']['isLoggedIn'] == False:
-            raise Exception('ログインに失敗しました。メールアドレスまたはパスワードが間違っている可能性があります。')
+            raise JKCommentLoginError('ログインに失敗しました。メールアドレスまたはパスワードが間違っている可能性があります。')
 
         return watchsession_info
 
@@ -285,7 +295,7 @@ class JKComment:
 
         if ('webSocketUrl' not in watchsession_info['site']['relive'] or
             watchsession_info['site']['relive']['webSocketUrl'] == ''):
-            raise Exception('コメントセッションへの接続用 WebSocket の取得に失敗しました。')
+            raise JKCommentSessionError('コメントセッションへの接続用 WebSocket の取得に失敗しました。')
 
         # User-Agent は標準のだと弾かれる
         watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], header={
@@ -341,7 +351,7 @@ class JKComment:
         # 実際のニコニコチャンネル/コミュニティの ID と種別を取得
         jikkyo_data = self.__getRealNicoJikkyoID(jikkyo_id)
         if jikkyo_data is None:
-            raise Exception('指定された実況 ID は存在しません。')
+            raise JKCommentJikkyoIDError('指定された実況 ID は存在しません。')
 
         # ニコニコチャンネルのみ
         if jikkyo_data['type'] == 'channel':
@@ -457,3 +467,16 @@ class JKComment:
             chat_elemtree.text = chat_content
 
         return elemtree
+
+
+# 例外定義
+class JKCommentFormatError(Exception):
+    pass
+class JKCommentLoginError(Exception):
+    pass
+class JKCommentSessionError(Exception):
+    pass
+class JKCommentJikkyoIDError(Exception):
+    pass
+class JKCommentLiveIDError(Exception):
+    pass
