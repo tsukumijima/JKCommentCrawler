@@ -162,6 +162,11 @@ class JKComment:
                     print() # 改行を出力
                     break
 
+                # 最初のコメントのタイムスタンプが取得開始より前なら抜ける（無駄に取得しないように）]
+                if int(chat[0]['chat']['date']) < self.date.timestamp():
+                    print() # 改行を出力
+                    break
+
             print(f"コメントを {watchsession_info['program']['title']} から取得しました。")
 
             # 番組単体で取得したコメントを返す
@@ -184,7 +189,7 @@ class JKComment:
         for live_id in live_ids:
             chat = chat + getCommentOne(live_id)
         
-        print('-' * shutil.get_terminal_size().columns)    
+        print('-' * shutil.get_terminal_size().columns)
         print('合計コメント数: ' + str(len(chat)))
 
         # コメントのうち /emotion や /nicoad などの運営コメントを弾く
