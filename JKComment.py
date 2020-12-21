@@ -344,54 +344,89 @@ class JKComment:
         if jikkyo_data['type'] == 'channel':
 
             # API にアクセス
-            api_baseurl = 'https://public.api.nicovideo.jp/v1/channel/channelapp/content/lives.json?sort=startedAt&page=1&channelId='
-            api_response = json.loads(requests.get(api_baseurl + jikkyo_data['id'][2:]).content)  # ch とか co を削ぎ落としてから
+            api_url = f"https://public.api.nicovideo.jp/v1/channel/channelapp/channels/{jikkyo_data['id'][2:]}/lives.json?sort=channelpage"
+            api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
 
             # アイテムをソート
             # 参考: https://note.nkmk.me/python-dict-list-sort/
-            items = api_response['data']['items']
-            items = sorted(items, key=lambda x: x['beginAt'])  # 開始時刻昇順でソート
-
-            result = []
-
-            for item in items:
-
-                # ISO8601 フォーマットを datetime に変換しておく
-                beginAt = datetime.fromisoformat(item['beginAt'])
-                endAt = datetime.fromisoformat(item['endAt'])
-
-                # beginAt または endAt の日付と date の日付が一致するなら
-                if (beginAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d') or
-                    endAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d')):
-
-                    # beginAt が現在時刻より後のものを弾く（取得できないので）
-                    if beginAt < datetime.now().astimezone():
-
-                        # 番組 ID を返す
-                        result.append('lv' + str(item['id']))
-
-            # 取得終了時刻が現在時刻より後（未来）の場合、当然ながら全部取得できないので注意を出す
-            # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合 
-            # astimezone() しないと比較できない👈重要
-            date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
-            if date_235959 > datetime.now().astimezone():
-
-                print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
-                print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
-                print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
-                print('-' * shutil.get_terminal_size().columns)  # 行区切り
-
-            # 全部回しても取得できなかったら None
-            if len(result) == 0:
-                return None
-            else:
-                return result
+            items = api_response['data']
+            items = sorted(items, key=lambda x: x['showTime']['beginAt'])  # 開始時刻昇順でソート
 
         # ニコニコミュニティのみ
         elif jikkyo_data['type'] == 'community':
 
-            # TODO: ここ書く
+            live_ids = []
+            items = []
+
+            # ニコニコミュニティのトップページ
+            community_top = BeautifulSoup(requests.get('https://com.nicovideo.jp/community/' + jikkyo_data['id']).content, 'html.parser')
+
+            # 現在放送中の放送 ID があれば抽出
+            if (len(community_top.select('a.now_live_inner')) > 0):
+                live_id_onair = community_top.select('a.now_live_inner')[0].get('href')
+                live_id_onair_real = re.search(r'https?://live.nicovideo.jp/watch/(lv[0-9]+)', live_id_onair).groups()[0]
+                live_ids.append(live_id_onair_real)
+
+            # ニコニコミュニティの生放送アーカイブページ
+            community_live = BeautifulSoup(requests.get('https://com.nicovideo.jp/live_archives/' + jikkyo_data['id']).content, 'html.parser')
+
+            # タイムシフトの放送 ID を抽出
+            for live_id in community_live.select('a.liveTitle'):
+                live_id_real = re.search(r'https?://live.nicovideo.jp/watch/(lv[0-9]+)', live_id.get('href')).groups()[0]
+                live_ids.append(live_id_real)
+
+            # 擬似的にチャンネル側の API レスポンスを再現
+            # その方が把握しやすいので
+            for live_id in live_ids:
+
+                # API にアクセス
+                api_url = f'https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}'
+                api_response = json.loads(requests.get(api_url).content)
+
+                # なぜかこの API は ID が文字列なので、互換にするために数値に変換
+                api_response['data']['id'] = int(api_response['data']['id'].replace('lv', ''))
+                
+                # items にレスポンスデータを入れる
+                items.append(api_response['data'])
+                
+            # 開始時刻昇順でソート
+            items = sorted(items, key=lambda x: x['showTime']['beginAt'])
+
+
+        result = []
+
+        for item in items:
+
+            # ISO8601 フォーマットを datetime に変換しておく
+            beginAt = datetime.fromisoformat(item['showTime']['beginAt'])
+            endAt = datetime.fromisoformat(item['showTime']['endAt'])
+
+            # beginAt または endAt の日付と date の日付が一致するなら
+            if (beginAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d') or
+                endAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d')):
+
+                # beginAt が現在時刻より後のものを弾く（取得できないので）
+                if beginAt < datetime.now().astimezone():
+
+                    # 番組 ID を返す
+                    result.append('lv' + str(item['id']))
+
+        # 取得終了時刻が現在時刻より後（未来）の場合、当然ながら全部取得できないので注意を出す
+        # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合 
+        # astimezone() しないと比較できない👈重要
+        date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
+        if date_235959 > datetime.now().astimezone():
+
+            print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
+            print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
+            print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
+            print('-' * shutil.get_terminal_size().columns)  # 行区切り
+
+        # 全部回しても取得できなかったら None
+        if len(result) == 0:
             return None
+        else:
+            return result
 
 
     # JSON オブジェクトの過去ログを XML 形式の過去ログに変換
