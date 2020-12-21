@@ -183,8 +183,8 @@ class JKComment:
         chat = []
         for live_id in live_ids:
             chat = chat + getCommentOne(live_id)
-            print('-' * shutil.get_terminal_size().columns)
-            
+        
+        print('-' * shutil.get_terminal_size().columns)    
         print('合計コメント数: ' + str(len(chat)))
 
         # コメントのうち /emotion や /nicoad などの運営コメントを弾く
