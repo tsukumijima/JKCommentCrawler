@@ -70,7 +70,9 @@ class JKComment:
             commentsession_info = self.__getCommentSessionInfo(watchsession_info)
 
             # 取得を開始する時間
-            when = endtime
+            # 番組終了時刻・取得終了時刻のどちらか小さい方を選択
+            date_235959_timestamp = (self.date + timedelta(hours=23, minutes=59, seconds=59)).astimezone().timestamp()
+            when = min(endtime, date_235959_timestamp)
 
             # Sec-WebSocket-Protocol が重要
             commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], header={
@@ -155,7 +157,7 @@ class JKComment:
                 
                 # 標準出力を上書きする
                 # 参考: https://hacknote.jp/archives/51679/
-                print('\r合計 ' + str(len(chat)) + ' 件のコメントを取得しました。', end='')
+                print('\r' + f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chat))} 件のコメントを取得しました。", end='')
 
                 # コメ番が 1 ならすべてのコメントを取得したと判断して抜ける
                 if int(chat[0]['chat']['no']) == 1:
