@@ -122,10 +122,6 @@ class JKComment:
                     # コメント情報
                     if 'chat' in response:
 
-                        # /nicoad など特殊コメントは追加せずに次のループへ
-                        if re.match(r'/[a-z]+ ', response['chat']['content']):
-                            continue
-
                         # コメントを追加
                         chat_child.append(response)
 
@@ -187,11 +183,18 @@ class JKComment:
         for live_id in live_ids:
             chat = chat + getCommentOne(live_id)
             print('-' * shutil.get_terminal_size().columns)
+            
+        print('合計コメント数: ' + str(len(chat)))
+
+        # コメントのうち /emotion や /nicoad などの運営コメントを弾く
+        # if not re.match … の部分を if re.match … にすると運営コメントだけ取り出せる
+        # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
+        print(f"/emotion や /nicoad などの運営コメントを除外しています…")
+        chat = [chatitem for chatitem in chat if not re.match(r'/[a-z]+ ', chatitem['chat']['content'])]
 
         # コメントのうち指定された日付以外に投稿されているものを弾く
         # コメントの投稿時間の日付と、指定された日付が一致するコメントのみ残す
         # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
-        print('合計コメント数: ' + str(len(chat)))
         print(f"{self.date.strftime('%Y/%m/%d')} 以外に投稿されたコメントを除外しています…")
         chat = [chatitem for chatitem in chat if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y/%m/%d') == self.date.strftime('%Y/%m/%d')]
 
