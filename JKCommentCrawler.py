@@ -59,7 +59,7 @@ def main():
         def prettify(elem):
             # xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
             xml = ET.tostring(elem, encoding='UTF-8', pretty_print=True).decode('UTF-8').replace('>\n  ', '>\n')  # インデントを除去
-            xml = xml.replace('<packet>\n', '').replace('</packet>', '')
+            xml = xml.replace('<packet>\n', '').replace('</packet>', '').replace('<packet/>', '')
             return xml.rstrip()
 
         # ファイル名・フォルダ
@@ -67,9 +67,13 @@ def main():
         filename = f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/{date.strftime('%Y%m%d')}.nicojk"
 
         # コメントデータ（XML）を保存
-        with open(filename, 'w') as f:
-            f.write(prettify(comment_xmlobject))
-            print(f"ログを {filename} に保存しました。")
+        comment_xml = prettify(comment_xmlobject)
+        if comment_xml == '':
+            print(f"{date.strftime('%Y/%m/%d')} 中のコメントが 0 件のため、ログの保存をスキップします。")
+        else:
+            with open(filename, 'w') as f:
+                f.write(comment_xml)
+                print(f"ログを {filename} に保存しました。")
 
         # 行区切り
         print('=' * shutil.get_terminal_size().columns)
