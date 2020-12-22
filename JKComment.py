@@ -322,7 +322,9 @@ class JKComment:
 
         if ('webSocketUrl' not in watchsession_info['site']['relive'] or
             watchsession_info['site']['relive']['webSocketUrl'] == ''):
-            raise JKCommentSessionError('コメントセッションへの接続用 WebSocket の取得に失敗しました。')
+            raise JKCommentSessionError(
+                'コメントセッションへの接続用 WebSocket の取得に失敗しました。\n一般会員でかつ事前にタイムシフトを取得していなかった可能性があります。'
+            )
 
         # User-Agent は標準のだと弾かれる
         watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], header={
