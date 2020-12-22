@@ -148,3 +148,4 @@ dmypy.json
 JKCommentCrawler.ini
 cookie.dump
 *.nicojk
+!.gitkeep
