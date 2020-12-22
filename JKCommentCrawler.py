@@ -81,7 +81,7 @@ def main():
         if comment_xml == '':
             print(f"{date.strftime('%Y/%m/%d')} 中のコメントが 0 件のため、ログの保存をスキップします。")
         else:
-            with open(filename, 'w') as f:
+            with open(filename, 'w', encoding='UTF-8') as f:
                 f.write(comment_xml)
                 print(f"ログを {filename} に保存しました。")
 
