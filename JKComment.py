@@ -267,7 +267,6 @@ class JKComment:
     def __login(self, force = False):
 
         cookie_dump = os.path.dirname(os.path.abspath(sys.argv[0])) + '/cookie.dump'
-        print(cookie_dump)
 
         # ログイン済み & 強制ログインでないなら以前取得した Cookieを再利用
         if os.path.exists(cookie_dump) and force == False:
