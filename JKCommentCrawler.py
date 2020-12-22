@@ -1,3 +1,4 @@
+#! /usr/bin/python3
 
 import argparse
 import configparser
@@ -7,9 +8,13 @@ import lxml.etree as ET
 import os
 from pprint import pprint
 import shutil
+import sys
 import xml.dom.minidom as minidom
 
 import JKComment
+
+# バージョン情報
+__version__ = '1.0.0'
 
 def main():
 
@@ -17,6 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description = 'ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class = argparse.RawTextHelpFormatter)
     parser.add_argument('Channel', help = '取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
     parser.add_argument('Date', help = '取得する日付 (ex: 2020-12-19)')
+    parser.add_argument('-v', '--version', action='version', help = 'バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
     args = parser.parse_args()
 
     # 引数
@@ -24,9 +30,9 @@ def main():
     date = dateutil.parser.parse(args.Date.rstrip())
 
     # 設定読み込み
-    config_ini = os.path.dirname(os.path.abspath(__file__)) + '/JKCommentCrawler.ini'
+    config_ini = os.path.dirname(os.path.abspath(sys.argv[0])) + '/JKCommentCrawler.ini'
     if not os.path.exists(config_ini):
-        raise Exception('JKCommentCrawler.ini が存在しません。\nJKCommentCrawler.example.ini からコピーし、適宜設定を変更してもう一度実行してください。')
+        raise Exception('JKCommentCrawler.ini が存在しません。JKCommentCrawler.example.ini からコピーし、\n適宜設定を変更して JKCommentCrawler と同じ場所に配置してください。')
     config = configparser.ConfigParser()
     config.read(config_ini, encoding='UTF-8')
 
