@@ -9,6 +9,7 @@ from pprint import pprint
 import re
 import requests
 import shutil
+import sys
 import websocket
 
 class JKComment:
@@ -126,7 +127,10 @@ class JKComment:
                     if 'thread' in response:
 
                         # 最後のコメ番
-                        last_res = response['thread']['last_res']
+                        if 'last_res' in response['thread']:
+                            last_res = response['thread']['last_res']
+                        else:
+                            last_res = -1  # last_res が存在しない場合は -1 に設定
                         
                     # コメント情報
                     if 'chat' in response:
@@ -137,6 +141,12 @@ class JKComment:
                         # 最後のコメ番なら while ループを抜ける
                         if last_res == response['chat']['no']:
                             break
+
+                # last_res が -1 → 最後のコメ番自体が存在しない → コメントが一度も存在しないスレッド
+                if last_res == -1: 
+                    # 処理を中断して抜ける
+                    print(f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chat))} 件のコメントを取得しました。")
+                    break
 
                 # when を取得した最後のコメントのタイムスタンプ + 1 で更新
                 # + 1 しないと取りこぼす可能性がある
@@ -256,10 +266,13 @@ class JKComment:
     # ニコニコにログインする
     def __login(self, force = False):
 
-        # ログイン済み & 強制ログインでないなら以前取得した Cookieを再利用
-        if os.path.exists('cookie.dump') and force == False:
+        cookie_dump = os.path.dirname(os.path.abspath(sys.argv[0])) + '/cookie.dump'
+        print(cookie_dump)
 
-            with open('cookie.dump', 'rb') as f:
+        # ログイン済み & 強制ログインでないなら以前取得した Cookieを再利用
+        if os.path.exists(cookie_dump) and force == False:
+
+            with open(cookie_dump, 'rb') as f:
                 cookies = pickle.load(f)
                 return cookies.get('user_session')
 
@@ -272,7 +285,7 @@ class JKComment:
             session.post(url, post)
 
             # Cookie を保存
-            with open('cookie.dump', 'wb') as f:
+            with open(cookie_dump, 'wb') as f:
                 pickle.dump(session.cookies, f)
             
             return session.cookies.get('user_session')
