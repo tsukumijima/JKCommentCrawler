@@ -47,9 +47,13 @@ def main():
         # コメントデータ（XML）を取得
         try:
             comment_xmlobject = jkcomment.getComment(objformat='xml')
-        except JKComment.JKCommentLiveIDError as ex:
-            # 処理中断、次のチャンネルに進む
+        # 処理中断、次のチャンネルに進む
+        except JKComment.LiveIDError as ex:
             print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
+            print('=' * shutil.get_terminal_size().columns)
+            return
+        except JKComment.SessionError as ex:
+            print(f"エラー: {ex.args[0]}")
             print('=' * shutil.get_terminal_size().columns)
             return
 

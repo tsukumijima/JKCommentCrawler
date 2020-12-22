@@ -198,13 +198,13 @@ class JKComment:
         # フォーマット
         objformat = objformat.lower()
         if objformat != 'xml' and objformat != 'json':
-            raise JKCommentFormatError('不正なフォーマットです。')
+            raise FormatError('不正なフォーマットです。')
 
         # 番組 ID らを取得
         # 指定された日付内に放送された全ての番組からコメントを取得するので複数入ることがある
         live_ids = self.__getNicoLiveID(self.jikkyo_id, self.date)
         if live_ids is None:
-            raise JKCommentLiveIDError('番組 ID を取得できませんでした。')
+            raise LiveIDError('番組 ID を取得できませんでした。')
 
         # コメントを取得
         chat = []
@@ -312,7 +312,7 @@ class JKComment:
             
         # もう一度ログインしたのに非ログイン状態なら raise
         if watchsession_info['user']['isLoggedIn'] == False:
-            raise JKCommentLoginError('ログインに失敗しました。メールアドレスまたはパスワードが間違っている可能性があります。')
+            raise LoginError('ログインに失敗しました。メールアドレスまたはパスワードが間違っている可能性があります。')
 
         return watchsession_info
 
@@ -322,7 +322,7 @@ class JKComment:
 
         if ('webSocketUrl' not in watchsession_info['site']['relive'] or
             watchsession_info['site']['relive']['webSocketUrl'] == ''):
-            raise JKCommentSessionError(
+            raise SessionError(
                 'コメントセッションへの接続用 WebSocket の取得に失敗しました。\n一般会員でかつ事前にタイムシフトを取得していなかった可能性があります。'
             )
 
@@ -380,7 +380,7 @@ class JKComment:
         # 実際のニコニコチャンネル/コミュニティの ID と種別を取得
         jikkyo_data = self.__getRealNicoJikkyoID(jikkyo_id)
         if jikkyo_data is None:
-            raise JKCommentJikkyoIDError('指定された実況 ID は存在しません。')
+            raise JikkyoIDError('指定された実況 ID は存在しません。')
 
         # ニコニコチャンネルのみ
         if jikkyo_data['type'] == 'channel':
@@ -505,13 +505,13 @@ class JKComment:
 
 
 # 例外定義
-class JKCommentFormatError(Exception):
+class FormatError(Exception):
     pass
-class JKCommentLoginError(Exception):
+class LoginError(Exception):
     pass
-class JKCommentSessionError(Exception):
+class SessionError(Exception):
     pass
-class JKCommentJikkyoIDError(Exception):
+class JikkyoIDError(Exception):
     pass
-class JKCommentLiveIDError(Exception):
+class LiveIDError(Exception):
     pass
