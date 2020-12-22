@@ -457,10 +457,10 @@ class JKComment:
         date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
         if date_235959 > datetime.now().astimezone():
 
+            print('-' * shutil.get_terminal_size().columns)  # 行区切り
             print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
             print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
             print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
-            print('-' * shutil.get_terminal_size().columns)  # 行区切り
 
         # 全部回しても取得できなかったら None
         if len(result) == 0:
