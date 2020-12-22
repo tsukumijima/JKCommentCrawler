@@ -114,7 +114,7 @@ class JKComment:
                 # 1000 コメント取得できるまでループ
                 while True:
 
-                    @timeout(5)  # 5 秒でタイムアウト
+                    @timeout(10)  # 10 秒でタイムアウト
                     def getResponse():
                         return json.loads(commentsession.recv())
 
