@@ -13,9 +13,6 @@ import JKComment
 
 def main():
 
-    # 行区切り
-    print('=' * shutil.get_terminal_size().columns)
-
     # 引数解析
     parser = argparse.ArgumentParser(description = 'ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class = argparse.RawTextHelpFormatter)
     parser.add_argument('Channel', help = '取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
@@ -36,6 +33,9 @@ def main():
     jkcomment_folder = config.get('Default', 'jkcomment_folder').rstrip('/')
     nicologin_mail = config.get('Default', 'nicologin_mail')
     nicologin_password = config.get('Default', 'nicologin_password')
+
+    # 行区切り
+    print('=' * shutil.get_terminal_size().columns)
 
 
     def get(jikkyo_id, date):
