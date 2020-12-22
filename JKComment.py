@@ -404,16 +404,22 @@ class JKComment:
             # 現在放送中の放送 ID があれば抽出
             if (len(community_top.select('a.now_live_inner')) > 0):
                 live_id_onair = community_top.select('a.now_live_inner')[0].get('href')
-                live_id_onair_real = re.search(r'https?://live.nicovideo.jp/watch/(lv[0-9]+)', live_id_onair).groups()[0]
+                live_id_onair_real = re.search(r'https?://live2?.nicovideo.jp/watch/(lv[0-9]+)', live_id_onair).groups()[0]
                 live_ids.append(live_id_onair_real)
+
+            # 予約中の放送 ID を抽出
+            for live_id in community_top.select('a.liveTitle'):
+                live_id_reserve_real = re.search(r'https?://live2?.nicovideo.jp/gate/(lv[0-9]+)', live_id.get('href'))
+                if live_id_reserve_real is not None:  # 正規表現にマッチするものがあれば
+                    live_ids.append(live_id_reserve_real.groups()[0])
 
             # ニコニコミュニティの生放送アーカイブページ
             community_live = BeautifulSoup(requests.get('https://com.nicovideo.jp/live_archives/' + jikkyo_data['id']).content, 'html.parser')
 
             # タイムシフトの放送 ID を抽出
             for live_id in community_live.select('a.liveTitle'):
-                live_id_real = re.search(r'https?://live.nicovideo.jp/watch/(lv[0-9]+)', live_id.get('href')).groups()[0]
-                live_ids.append(live_id_real)
+                live_id_timeshift_real = re.search(r'https?://live2?.nicovideo.jp/watch/(lv[0-9]+)', live_id.get('href')).groups()[0]
+                live_ids.append(live_id_timeshift_real)
 
             # 擬似的にチャンネル側の API レスポンスを再現
             # その方が把握しやすいので
