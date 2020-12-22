@@ -155,10 +155,21 @@ class JKComment:
                     while (last_comeban >= first_comeban):
 
                         # 重複分を 1 つずつ削除
-                        chat_child.pop(-1)
+                        if len(chat_child) > 0:
+                            chat_child.pop(-1)
+                        else:
+                            break
 
                         # 最後のコメ番を更新
-                        last_comeban = chat_child[-1]['chat']['no']
+                        if len(chat_child) > 0:
+                            last_comeban = chat_child[-1]['chat']['no']
+                        else:
+                            break
+
+                    # chat_child が空の場合
+                    # 1000 個取得しようとしてるのにコメントが何も入っていないのはおかしいので、全て取得したものとみなす
+                    if len(chat_child) == 0:
+                        break
 
                 # chat に chat_child の内容を取得
                 # 最後のコメントから遡るので、さっき取得したコメントは既に取得したコメントよりも前に連結する
