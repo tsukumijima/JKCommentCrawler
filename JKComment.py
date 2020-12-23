@@ -70,9 +70,14 @@ class JKComment:
             commentsession_info = self.__getCommentSessionInfo(watchsession_info)
 
             # 取得を開始する時間
-            # 番組終了時刻・取得終了時刻のどちらか小さい方を選択
-            date_235959_timestamp = (self.date + timedelta(hours=23, minutes=59, seconds=59)).astimezone().timestamp()
-            when = min(endtime, date_235959_timestamp)
+            if endtime > datetime.now().astimezone().timestamp():
+                # 番組終了時刻が現在時刻よりも後（＝現在放送中）の場合は、when を現在時刻のタイムスタンプに設定
+                # when を現在時刻より後に設定するとバグるのか、数分～数時間前以前のログしか返ってこないため
+                when = datetime.now().astimezone().timestamp()
+            else:
+                # 番組終了時刻・取得終了時刻のどちらか小さい方を選択
+                date_235959_timestamp = (self.date + timedelta(hours=23, minutes=59, seconds=59)).astimezone().timestamp()
+                when = min(endtime, date_235959_timestamp)
 
             # Sec-WebSocket-Protocol が重要
             commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], header={
