@@ -228,9 +228,10 @@ class JKComment:
 
         # コメントのうち /emotion や /nicoad などの運営コメントを弾く
         # if not re.match … の部分を if re.match … にすると運営コメントだけ取り出せる
+        # 全てのコメントを保存する方向にしたのでコメントアウト
         # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
-        print(f"/emotion や /nicoad などの運営コメントを除外しています…")
-        chat = [chatitem for chatitem in chat if not re.match(r'/[a-z]+ ', chatitem['chat']['content'])]
+        #print(f"/emotion や /nicoad などの運営コメントを除外しています…")
+        #chat = [chatitem for chatitem in chat if not re.match(r'/[a-z]+ ', chatitem['chat']['content'])]
 
         # コメントのうち指定された日付以外に投稿されているものを弾く
         # コメントの投稿時間の日付と、指定された日付が一致するコメントのみ残す
