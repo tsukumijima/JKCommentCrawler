@@ -310,6 +310,10 @@ class JKComment:
 
             # JSON データ (embedded-data) を取得
             soup = BeautifulSoup(response, 'html.parser')
+
+            if len(soup.select('script#embedded-data')) == 0:
+                raise ResponseError('視聴ページの取得に失敗しました。メンテナンス中かもしれません。')
+
             return json.loads(soup.select('script#embedded-data')[0].get('data-props'))
 
         # 情報を取得
@@ -445,6 +449,9 @@ class JKComment:
                 api_url = f'https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}'
                 api_response = json.loads(requests.get(api_url).content)
 
+                if 'data' not in api_response:
+                    raise ResponseError('API リクエストに失敗しました。メンテナンス中かもしれません。')
+
                 # なぜかこの API は ID が文字列なので、互換にするために数値に変換
                 api_response['data']['id'] = int(api_response['data']['id'].replace('lv', ''))
                 
@@ -519,6 +526,8 @@ class JKComment:
 
 
 # 例外定義
+class ResponseError(Exception):
+    pass
 class FormatError(Exception):
     pass
 class LoginError(Exception):

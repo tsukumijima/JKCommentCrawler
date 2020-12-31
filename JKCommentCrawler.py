@@ -58,7 +58,7 @@ def main():
             print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
             print('=' * shutil.get_terminal_size().columns)
             return
-        except JKComment.SessionError as ex:
+        except (JKComment.ResponseError, JKComment.SessionError) as ex:
             print(f"エラー: {ex.args[0]}")
             print('=' * shutil.get_terminal_size().columns)
             return
