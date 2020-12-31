@@ -342,7 +342,9 @@ class JKComment:
         if ('webSocketUrl' not in watchsession_info['site']['relive'] or
             watchsession_info['site']['relive']['webSocketUrl'] == ''):
             raise SessionError(
-                'コメントセッションへの接続用 WebSocket の取得に失敗しました。\n一般会員でかつ事前にタイムシフトを予約していなかった可能性があります。'
+                'コメントセッションへの接続用 WebSocket の取得に失敗しました。\n'\
+                '一般会員でかつ事前にタイムシフトを予約していなかったか、\n'\
+                '既にタイムシフト公開期間が終了している可能性があります。'
             )
 
         # User-Agent は標準のだと弾かれる
