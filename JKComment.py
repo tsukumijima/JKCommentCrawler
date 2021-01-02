@@ -33,6 +33,7 @@ class JKComment:
         'jk181': {'type': 'community', 'id': 'co5176125', 'name': 'BSフジ'},
         'jk211': {'type': 'channel',   'id': 'ch2646846', 'name': 'BS11'},
         'jk222': {'type': 'community', 'id': 'co5193029', 'name': 'BS12'},
+        'jk333': {'type': 'community', 'id': 'co5245469', 'name': 'AT-X'},
     }
 
     def __init__(self, jikkyo_id, date, nicologin_mail, nicologin_password):
