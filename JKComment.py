@@ -427,28 +427,16 @@ class JKComment:
             live_ids = []
             items = []
 
-            # ニコニコミュニティのトップページ
-            community_top = BeautifulSoup(requests.get('https://com.nicovideo.jp/community/' + jikkyo_data['id']).content, 'html.parser')
+            # API にアクセス
+            api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
+            api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
 
-            # 現在放送中の放送 ID があれば抽出
-            if (len(community_top.select('a.now_live_inner')) > 0):
-                live_id_onair = community_top.select('a.now_live_inner')[0].get('href')
-                live_id_onair_real = re.search(r'https?://live2?.nicovideo.jp/watch/(lv[0-9]+)', live_id_onair).groups()[0]
-                live_ids.append(live_id_onair_real)
-
-            # 予約中の放送 ID を抽出
-            for live_id in community_top.select('a.liveTitle'):
-                live_id_reserve_real = re.search(r'https?://live2?.nicovideo.jp/gate/(lv[0-9]+)', live_id.get('href'))
-                if live_id_reserve_real is not None:  # 正規表現にマッチするものがあれば
-                    live_ids.append(live_id_reserve_real.groups()[0])
-
-            # ニコニコミュニティの生放送アーカイブページ
-            community_live = BeautifulSoup(requests.get('https://com.nicovideo.jp/live_archives/' + jikkyo_data['id']).content, 'html.parser')
-
-            # タイムシフトの放送 ID を抽出
-            for live_id in community_live.select('a.liveTitle'):
-                live_id_timeshift_real = re.search(r'https?://live2?.nicovideo.jp/watch/(lv[0-9]+)', live_id.get('href')).groups()[0]
-                live_ids.append(live_id_timeshift_real)
+            # 放送 ID を抽出
+            for live in api_response['data']['lives']:
+                # ON_AIR 状態またはタイムシフトが取得可能であれば追加
+                # タイムシフトが取得不可のものも含めてしまうと無駄な API アクセスが発生するため
+                if (live['status'] == 'ON_AIR' or live['timeshift']['can_view'] == True):
+                    live_ids.append(live['id'])
 
             # 擬似的にチャンネル側の API レスポンスを再現
             # その方が把握しやすいので
