@@ -206,6 +206,9 @@ class JKComment:
                 if int(chat[0]['chat']['date']) < self.date.timestamp():
                     print() # 改行を出力
                     break
+            
+            # コメントセッションを閉じる
+            commentsession.close()
 
             print(f"コメントを {watchsession_info['program']['title']} から取得しました。")
 
@@ -416,6 +419,9 @@ class JKComment:
             api_url = f"https://public.api.nicovideo.jp/v1/channel/channelapp/channels/{jikkyo_data['id'][2:]}/lives.json?sort=channelpage"
             api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
 
+            if 'data' not in api_response:
+                raise ResponseError('API リクエストに失敗しました。メンテナンス中かもしれません。')
+
             # アイテムをソート
             # 参考: https://note.nkmk.me/python-dict-list-sort/
             items = api_response['data']
@@ -430,6 +436,9 @@ class JKComment:
             # API にアクセス
             api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
             api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
+
+            if 'data' not in api_response:
+                raise ResponseError('API リクエストに失敗しました。メンテナンス中かもしれません。')
 
             # 放送 ID を抽出
             for live in api_response['data']['lives']:
@@ -495,7 +504,7 @@ class JKComment:
             return result
 
 
-    # JSON オブジェクトの過去ログを XML 形式の過去ログに変換
+    # JSON オブジェクトの過去ログを XML オブジェクトの過去ログに変換
     def __convertToXML(self, comments):
     
         # XML のエレメントツリー
@@ -516,7 +525,7 @@ class JKComment:
             # 属性を XML エレメント内の値として取得
             chat_elemtree = ET.SubElement(elemtree, 'chat', { key: str(value) for key, value in chat.items() })
 
-            # XML エレメント内の値に以前取得した本文指定
+            # XML エレメント内の値に以前取得した本文を指定
             chat_elemtree.text = chat_content
 
         return elemtree
