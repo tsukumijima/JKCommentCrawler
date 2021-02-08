@@ -2,6 +2,7 @@
 
 import argparse
 import configparser
+import datetime
 import dateutil.parser
 import json
 import lxml.etree as ET
@@ -9,6 +10,7 @@ import os
 from pprint import pprint
 import shutil
 import sys
+import traceback
 import xml.dom.minidom as minidom
 
 import JKComment
@@ -61,6 +63,11 @@ def main():
         except (JKComment.ResponseError, JKComment.SessionError) as ex:
             print(f"エラー: {ex.args[0]}")
             print('=' * shutil.get_terminal_size().columns)
+            return
+        except Exception as ex:
+            traceback.print_exc(file=sys.stderr)
+            print(f"エラー: {ex.__class__.__name__}: '{ex.args[0]}'", file=sys.stderr)
+            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}", file=sys.stderr)
             return
 
         # XML をフォーマットする
