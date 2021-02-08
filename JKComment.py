@@ -435,8 +435,11 @@ class JKComment:
             for live in api_response['data']['lives']:
                 # ON_AIR 状態またはタイムシフトが取得可能であれば追加
                 # タイムシフトが取得不可のものも含めてしまうと無駄な API アクセスが発生するため
-                if (live['status'] == 'ON_AIR' or live['timeshift']['can_view'] == True):
-                    live_ids.append(live['id'])
+                try:
+                    if (live['status'] == 'ON_AIR' or live['timeshift']['can_view'] == True):
+                        live_ids.append(live['id'])
+                except:
+                    pass
 
             # 擬似的にチャンネル側の API レスポンスを再現
             # その方が把握しやすいので
