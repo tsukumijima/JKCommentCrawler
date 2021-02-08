@@ -438,7 +438,8 @@ class JKComment:
                 try:
                     if (live['status'] == 'ON_AIR' or live['timeshift']['can_view'] == True):
                         live_ids.append(live['id'])
-                except:
+              　　　# タイムシフトが設定されてないとcan_view要素がなくてエラーするので
+                except:　
                     pass
 
             # 擬似的にチャンネル側の API レスポンスを再現
