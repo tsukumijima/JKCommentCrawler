@@ -92,20 +92,33 @@ def main():
         # XML をフォーマットする
         # lxml.etree を使うことで属性の順序を保持できる
         # 参考: https://banatech.net/blog/view/19
-        def prettify(elem):
+        def format_xml(elem):
             # xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
             xml = ET.tostring(elem, encoding='UTF-8', pretty_print=True).decode('UTF-8').replace('>\n  ', '>\n')  # インデントを除去
             xml = xml.replace('<packet>\n', '').replace('</packet>', '').replace('<packet/>', '')
             return xml.rstrip()
 
+        # XML にフォーマット
+        comment_xml = format_xml(comment_xmlobject)
+
         # ファイル名・フォルダ
         os.makedirs(f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/", exist_ok=True)
         filename = f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/{date.strftime('%Y%m%d')}.nicojk"
 
+        # 既にファイルが存在していたら文字数を取得
+        if os.path.exists(filename):
+            with open(filename, 'r', encoding='UTF-8') as f:
+                filelength = len(f.read())
+        else:
+            filelength = 0
+
         # コメントデータ（XML）を保存
-        comment_xml = prettify(comment_xmlobject)
         if comment_xml == '':
             print(f"{date.strftime('%Y/%m/%d')} 中のコメントが 0 件のため、ログの保存をスキップします。")
+        # 以前取得したログの方が今取得したログよりも文字数が多いとき
+        # タイムシフトの公開期限が終了したなどの理由で以前よりもログ取得が少なくなる場合に上書きしないようにする
+        elif filelength > len(comment_xml):
+            print('以前取得したログの方が文字数が多いため、ログの保存をスキップします。')
         else:
             with open(filename, 'w', encoding='UTF-8') as f:
                 f.write(comment_xml)
