@@ -95,7 +95,7 @@ class JKComment:
                 })
             except ConnectionResetError as ex:
                 raise WebSocketError(f"コメントセッションへの接続がリセットされました。({ex})")
-            
+
             # コメント情報を入れるリスト
             chat = []
 
@@ -120,7 +120,7 @@ class JKComment:
                         }
                     },
                 ]))
-                
+
                 # コメント情報を入れるリスト（1000 コメントごとの小分け）
                 chat_child = []
 
@@ -149,7 +149,7 @@ class JKComment:
                             last_res = response['thread']['last_res']
                         else:
                             last_res = -1  # last_res が存在しない場合は -1 に設定
-                        
+
                     # コメント情報
                     if 'chat' in response:
 
@@ -199,7 +199,7 @@ class JKComment:
                 # chat に chat_child の内容を取得
                 # 最後のコメントから遡るので、さっき取得したコメントは既に取得したコメントよりも前に連結する
                 chat = chat_child + chat
-                
+
                 # 標準出力を上書きする
                 # 参考: https://hacknote.jp/archives/51679/
                 print('\r' + f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chat))} 件のコメントを取得しました。", end='')
@@ -213,7 +213,7 @@ class JKComment:
                 if int(chat[0]['chat']['date']) < self.date.timestamp():
                     print() # 改行を出力
                     break
-            
+
             # コメントセッションを閉じる
             commentsession.close()
 
@@ -238,7 +238,7 @@ class JKComment:
         chat = []
         for live_id in live_ids:
             chat = chat + getCommentOne(live_id)
-        
+
         print('-' * shutil.get_terminal_size().columns)
         print(f"合計コメント数: {str(len(chat))} 件")
 
@@ -308,7 +308,7 @@ class JKComment:
             # Cookie を保存
             with open(cookie_dump, 'wb') as f:
                 pickle.dump(session.cookies, f)
-            
+
             return session.cookies.get('user_session')
 
 
@@ -344,7 +344,7 @@ class JKComment:
 
             # もう一度情報を取得
             watchsession_info = get(user_session)
-            
+
         # もう一度ログインしたのに非ログイン状態なら raise
         if watchsession_info['user']['isLoggedIn'] == False:
             raise LoginError('ログインに失敗しました。メールアドレスまたはパスワードが間違っている可能性があります。')
@@ -476,10 +476,10 @@ class JKComment:
 
                 # なぜかこの API は ID が文字列なので、互換にするために数値に変換
                 api_response['data']['id'] = int(api_response['data']['id'].replace('lv', ''))
-                
+
                 # items にレスポンスデータを入れる
                 items.append(api_response['data'])
-                
+
             # 開始時刻昇順でソート
             items = sorted(items, key=lambda x: x['showTime']['beginAt'])
 
@@ -522,10 +522,10 @@ class JKComment:
 
     # JSON オブジェクトの過去ログを XML オブジェクトの過去ログに変換
     def __convertToXML(self, comments):
-    
+
         # XML のエレメントツリー
         elemtree = ET.Element('packet')
-        
+
         # コメントごとに
         for comment in comments:
 
