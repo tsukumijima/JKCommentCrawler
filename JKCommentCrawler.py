@@ -51,28 +51,41 @@ def main():
         # インスタンスを作成
         jkcomment = JKComment.JKComment(jikkyo_id, date, nicologin_mail, nicologin_password)
         print(f"{date.strftime('%Y/%m/%d')} 中に放送された {JKComment.JKComment.getJikkyoChannelName(jikkyo_id)} のコメントを取得します。")
-        
-        # コメントデータ（XML）を取得
-        try:
-            comment_xmlobject = jkcomment.getComment(objformat='xml')
-        # 処理中断、次のチャンネルに進む
-        except JKComment.LiveIDError as ex:
-            print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
-            print('=' * shutil.get_terminal_size().columns)
-            return
-        except (JKComment.SessionError, JKComment.ResponseError, JKComment.WebSocketError) as ex:
-            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
-            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id}", file=sys.stderr)
-            print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
-            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
-            print('=' * shutil.get_terminal_size().columns)
-            return
-        except Exception as ex:
-            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
-            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id}", file=sys.stderr)
-            print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
-            traceback.print_exc(file=sys.stderr)
-            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+
+        # リトライ回数
+        retry_maxcount = 3
+        retry_count = 1
+        while (retry_count <= retry_maxcount):
+
+            # コメントデータ（XML）を取得
+            try:
+                comment_xmlobject = jkcomment.getComment(objformat='xml')
+                break  # ループを抜ける
+            # 処理中断、次のチャンネルに進む
+            except JKComment.LiveIDError as ex:
+                print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
+                print('=' * shutil.get_terminal_size().columns)
+                return  # この関数を抜ける
+            # 捕捉された例外
+            except (JKComment.SessionError, JKComment.ResponseError, JKComment.WebSocketError) as ex:
+                print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+                print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id} リトライ回数: {retry_count}", file=sys.stderr)
+                print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
+                print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+            # 捕捉されない例外
+            except Exception as ex:
+                print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+                print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id} リトライ回数: {retry_count}", file=sys.stderr)
+                print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+                print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+
+            # リトライカウント
+            retry_count = retry_count + 1
+
+        # 3 回リトライしてもうまくいかなかったら終了
+        if retry_count >= retry_maxcount:
+            print('リトライに失敗しました。スキップします。')
             print('=' * shutil.get_terminal_size().columns)
             return
 
@@ -106,7 +119,7 @@ def main():
     if jikkyo_id.lower() == 'all':
         for jikkyo_id_ in JKComment.JKComment.getJikkyoIDList():
             get(jikkyo_id_, date)
-            
+
     # コメントデータ（XML）を単一チャンネル分取得
     else:
         get(jikkyo_id, date)
