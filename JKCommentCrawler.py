@@ -60,14 +60,20 @@ def main():
             print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
             print('=' * shutil.get_terminal_size().columns)
             return
-        except (JKComment.ResponseError, JKComment.SessionError) as ex:
-            print(f"エラー: {ex.args[0]}")
+        except (JKComment.SessionError, JKComment.ResponseError, JKComment.WebSocketError) as ex:
+            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id}", file=sys.stderr)
+            print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
+            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
             print('=' * shutil.get_terminal_size().columns)
             return
         except Exception as ex:
+            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id}", file=sys.stderr)
+            print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
-            print(f"エラー: {ex.__class__.__name__}: '{ex.args[0]}'", file=sys.stderr)
-            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}", file=sys.stderr)
+            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+            print('=' * shutil.get_terminal_size().columns)
             return
 
         # XML をフォーマットする

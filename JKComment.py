@@ -86,12 +86,15 @@ class JKComment:
                 when = min(endtime, date_235959_timestamp)
 
             # Sec-WebSocket-Protocol が重要
-            commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], header={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
-                'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
-                'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
-                'Sec-WebSocket-Version': '13',
-            })
+            try:
+                commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], header={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                    'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                    'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
+                    'Sec-WebSocket-Version': '13',
+                })
+            except ConnectionResetError as ex:
+                raise WebSocketError(f"コメントセッションへの接続がリセットされました。({ex})")
             
             # コメント情報を入れるリスト
             chat = []
@@ -129,10 +132,14 @@ class JKComment:
 
                     # 受信データを取得
                     try:
-                        response = json.loads(commentsession.recv())
+                        response_raw = commentsession.recv()
+                        response = json.loads(response_raw)
                     # タイムアウトした（＝これ以上コメントは返ってこない）のでループを抜ける
                     except websocket._exceptions.WebSocketTimeoutException:
                         break
+                    # JSON デコードに失敗
+                    except json.decoder.JSONDecodeError:
+                        raise WebSocketError(f"受信データ '{response_raw}' を JSON としてデコードできません。")
 
                     # スレッド情報
                     if 'thread' in response:
@@ -357,11 +364,14 @@ class JKComment:
             )
 
         # User-Agent は標準のだと弾かれる
-        watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], header={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
-            'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
-            'Sec-WebSocket-Version': '13',
-        })
+        try:
+            watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], header={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                'Sec-WebSocket-Version': '13',
+            })
+        except ConnectionResetError as ex:
+            raise WebSocketError(f"視聴セッションへの接続がリセットされました。({ex})")
 
         # 視聴セッションリクエストを送る
         watchsession.send(json.dumps({
@@ -384,7 +394,12 @@ class JKComment:
         while True:
 
             # 受信データを取得
-            response = json.loads(watchsession.recv())
+            try:
+                response_raw = watchsession.recv()
+                response = json.loads(response_raw)
+            # JSON デコードに失敗
+            except json.decoder.JSONDecodeError:
+                raise WebSocketError(f"受信データ '{response_raw}' を JSON としてデコードできません。")
 
             # 部屋情報
             if response['type'] == 'room':
@@ -453,7 +468,7 @@ class JKComment:
             for live_id in live_ids:
 
                 # API にアクセス
-                api_url = f'https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}'
+                api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
                 api_response = json.loads(requests.get(api_url).content)
 
                 if 'data' not in api_response:
@@ -533,15 +548,17 @@ class JKComment:
 
 
 # 例外定義
-class ResponseError(Exception):
-    pass
 class FormatError(Exception):
+    pass
+class JikkyoIDError(Exception):
+    pass
+class LiveIDError(Exception):
     pass
 class LoginError(Exception):
     pass
 class SessionError(Exception):
     pass
-class JikkyoIDError(Exception):
+class ResponseError(Exception):
     pass
-class LiveIDError(Exception):
+class WebSocketError(Exception):
     pass
