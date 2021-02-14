@@ -10,6 +10,7 @@ import os
 from pprint import pprint
 import shutil
 import sys
+import time
 import traceback
 import xml.dom.minidom as minidom
 
@@ -82,6 +83,10 @@ def main():
 
             # リトライカウント
             retry_count = retry_count + 1
+
+            # 3 秒スリープ
+            if retry_count <= retry_maxcount:
+                time.sleep(3)
 
         # 3 回リトライしてもうまくいかなかったら終了
         if retry_count >= retry_maxcount:
