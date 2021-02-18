@@ -67,6 +67,11 @@ def main():
                 print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
                 print('=' * shutil.get_terminal_size().columns)
                 return  # この関数を抜ける
+            # 処理中断、終了する
+            except JKComment.JikkyoIDError as ex:
+                print(f"実況チャンネル {jikkyo_id} に該当するニコニコチャンネルまたはコミュニティが見つかりませんでした。")
+                print('=' * shutil.get_terminal_size().columns)
+                return  # この関数を抜ける
             # 捕捉された例外
             except (JKComment.SessionError, JKComment.ResponseError, JKComment.WebSocketError) as ex:
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
