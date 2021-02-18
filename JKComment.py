@@ -38,6 +38,7 @@ class JKComment:
         'jk193': {'type': 'community', 'id': 'co5251983', 'name': 'WOWOW CINEMA'},
         'jk211': {'type': 'channel',   'id': 'ch2646846', 'name': 'BS11'},
         'jk222': {'type': 'community', 'id': 'co5193029', 'name': 'BS12'},
+        'jk236': {'type': 'community', 'id': 'co5296297', 'name': 'BSアニマックス'},
         'jk333': {'type': 'community', 'id': 'co5245469', 'name': 'AT-X'},
     }
 
