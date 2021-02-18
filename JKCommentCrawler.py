@@ -17,7 +17,7 @@ import xml.dom.minidom as minidom
 import JKComment
 
 # バージョン情報
-__version__ = '1.0.0'
+__version__ = '1.5.0'
 
 def main():
 
