@@ -82,7 +82,7 @@ def main():
             except Exception as ex:
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
                 print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id} リトライ回数: {retry_count}", file=sys.stderr)
-                print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
+                print(f"捕捉されないエラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
 
@@ -95,7 +95,9 @@ def main():
 
         # 3 回リトライしてもうまくいかなかったら終了
         if retry_count >= retry_maxcount:
-            print('リトライに失敗しました。スキップします。')
+            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+            print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id} リトライに失敗しました。スキップします。", file=sys.stderr)
+            print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
             print('=' * shutil.get_terminal_size().columns)
             return
 

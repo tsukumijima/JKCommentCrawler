@@ -436,7 +436,7 @@ class JKComment:
             api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
 
             if 'data' not in api_response:
-                raise ResponseError('API リクエストに失敗しました。メンテナンス中かもしれません。')
+                raise ResponseError('public.api.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
             # アイテムをソート
             # 参考: https://note.nkmk.me/python-dict-list-sort/
@@ -454,7 +454,7 @@ class JKComment:
             api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
 
             if 'data' not in api_response:
-                raise ResponseError('API リクエストに失敗しました。メンテナンス中かもしれません。')
+                raise ResponseError('com.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
             # 放送 ID を抽出
             for live in api_response['data']['lives']:
@@ -472,8 +472,8 @@ class JKComment:
                 api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
                 api_response = json.loads(requests.get(api_url).content)
 
-                if 'data' not in api_response:
-                    raise ResponseError('API リクエストに失敗しました。メンテナンス中かもしれません。')
+                if ('data' not in api_response) or ('id' not in api_response['data']):
+                    raise ResponseError('api.cas.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
                 # なぜかこの API は ID が文字列なので、互換にするために数値に変換
                 api_response['data']['id'] = int(api_response['data']['id'].replace('lv', ''))
