@@ -286,6 +286,18 @@ class JKComment:
             return None
 
 
+    # ニコ生がメンテナンス中やサーバーエラーでないかを確認
+    @staticmethod
+    def getNicoLiveStatus():
+        nicolive_url = 'https://live.nicovideo.jp/'
+        response = requests.get(nicolive_url)  # レスポンスを取得
+        # HTTP ステータスコードで判定
+        if response.status_code == 200:
+            return [True, response.status_code]
+        else:
+            return [False, response.status_code]
+
+
     # ニコニコにログインする
     def __login(self, force = False):
 
