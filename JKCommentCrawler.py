@@ -142,7 +142,7 @@ def main():
 
     # コメントデータ（XML）を全てのチャンネル分取得
     if jikkyo_id.lower() == 'all':
-        for jikkyo_id_ in JKComment.JKComment.getJikkyoIDList():
+        for jikkyo_id_ in JKComment.JKComment.getJikkyoChannelList():
             get(jikkyo_id_, date)
 
     # コメントデータ（XML）を単一チャンネル分取得

@@ -15,7 +15,7 @@ import websocket
 class JKComment:
 
     # 実況 ID とチャンネル/コミュニティ ID の対照表
-    jikkyo_id_table = {
+    jikkyo_channel_table = {
         'jk1': {'type': 'channel', 'id': 'ch2646436', 'name': 'NHK総合'},
         'jk2': {'type': 'channel', 'id': 'ch2646437', 'name': 'NHKEテレ'},
         'jk4': {'type': 'channel', 'id': 'ch2646438', 'name': '日本テレビ'},
@@ -273,15 +273,15 @@ class JKComment:
 
     # 実況 ID リストを取得
     @staticmethod
-    def getJikkyoIDList():
-        return JKComment.jikkyo_id_table.keys()
+    def getJikkyoChannelList():
+        return JKComment.jikkyo_channel_table.keys()
 
 
     # 実況チャンネル名を取得
     @staticmethod
     def getJikkyoChannelName(jikkyo_id):
-        if jikkyo_id in JKComment.jikkyo_id_table:
-            return JKComment.jikkyo_id_table[jikkyo_id]['name']
+        if jikkyo_id in JKComment.jikkyo_channel_table:
+            return JKComment.jikkyo_channel_table[jikkyo_id]['name']
         else:
             return None
 
@@ -414,8 +414,8 @@ class JKComment:
 
     # スクリーンネームの実況 ID から、実際のニコニコチャンネル/コミュニティの ID と種別を取得する
     def __getRealNicoJikkyoID(self, jikkyo_id):
-        if jikkyo_id in JKComment.jikkyo_id_table:
-            return JKComment.jikkyo_id_table[jikkyo_id]
+        if jikkyo_id in JKComment.jikkyo_channel_table:
+            return JKComment.jikkyo_channel_table[jikkyo_id]
         else:
             return None
 
