@@ -5,12 +5,12 @@ import json
 import lxml.etree as ET
 import os
 import pickle
-from pprint import pprint
-import re
+# import re
 import requests
 import shutil
 import sys
 import websocket
+
 
 class JKComment:
 
@@ -53,7 +53,6 @@ class JKComment:
         # メールアドレス・パスワード
         self.nicologin_mail = nicologin_mail
         self.nicologin_password = nicologin_password
-
 
     # コメントセッションに接続してコメントを取得する
     # objformat は xml または json のいずれか
@@ -104,12 +103,12 @@ class JKComment:
 
                 # コメントリクエストを送る
                 commentsession.send(json.dumps([
-                    { 'ping': {'content': 'rs:0'} },
-                    { 'ping': {'content': 'ps:0'} },
-                    { 'ping': {'content': 'pf:0'} },
-                    { 'ping': {'content': 'rf:0'} },
+                    {'ping': {'content': 'rs:0'}},
+                    {'ping': {'content': 'ps:0'}},
+                    {'ping': {'content': 'pf:0'}},
+                    {'ping': {'content': 'rf:0'}},
                     {
-                        'thread':{
+                        'thread': {
                             'thread': commentsession_info['threadId'],  # スレッド ID
                             'version': '20061206',
                             'when': when + 1,  # 基準にする時間 (UNIXTime)  +1 するのは取りこぼしをなくすため
@@ -162,7 +161,7 @@ class JKComment:
                             break
 
                 # last_res が -1 → 最後のコメ番自体が存在しない → コメントが一度も存在しないスレッド
-                if last_res == -1: 
+                if last_res == -1:
                     # 処理を中断して抜ける
                     print(f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chat))} 件のコメントを取得しました。")
                     break
@@ -207,12 +206,12 @@ class JKComment:
 
                 # コメ番が 1 ならすべてのコメントを取得したと判断して抜ける
                 if int(chat[0]['chat']['no']) == 1:
-                    print() # 改行を出力
+                    print()  # 改行を出力
                     break
 
                 # 最初のコメントのタイムスタンプが取得開始より前なら抜ける（無駄に取得しないように）]
                 if int(chat[0]['chat']['date']) < self.date.timestamp():
-                    print() # 改行を出力
+                    print()  # 改行を出力
                     break
 
             # コメントセッションを閉じる
@@ -222,7 +221,6 @@ class JKComment:
 
             # 番組単体で取得したコメントを返す
             return chat
-
 
         # フォーマット
         objformat = objformat.lower()
@@ -247,8 +245,8 @@ class JKComment:
         # if not re.match … の部分を if re.match … にすると運営コメントだけ取り出せる
         # 全てのコメントを保存する方向にしたのでコメントアウト
         # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
-        #print(f"/emotion や /nicoad などの運営コメントを除外しています…")
-        #chat = [chatitem for chatitem in chat if not re.match(r'/[a-z]+ ', chatitem['chat']['content'])]
+        # print(f"/emotion や /nicoad などの運営コメントを除外しています…")
+        # chat = [chatitem for chatitem in chat if not re.match(r'/[a-z]+ ', chatitem['chat']['content'])]
 
         # コメントのうち指定された日付以外に投稿されているものを弾く
         # コメントの投稿時間の日付と、指定された日付が一致するコメントのみ残す
@@ -270,12 +268,10 @@ class JKComment:
             # 取得したコメントをそのまま返す
             return chat
 
-
     # 実況 ID リストを取得
     @staticmethod
     def getJikkyoChannelList():
         return JKComment.jikkyo_channel_table.keys()
-
 
     # 実況チャンネル名を取得
     @staticmethod
@@ -284,7 +280,6 @@ class JKComment:
             return JKComment.jikkyo_channel_table[jikkyo_id]['name']
         else:
             return None
-
 
     # ニコ生がメンテナンス中やサーバーエラーでないかを確認
     @staticmethod
@@ -297,14 +292,13 @@ class JKComment:
         else:
             return [False, response.status_code]
 
-
     # ニコニコにログインする
-    def __login(self, force = False):
+    def __login(self, force=False):
 
         cookie_dump = os.path.dirname(os.path.abspath(sys.argv[0])) + '/cookie.dump'
 
         # ログイン済み & 強制ログインでないなら以前取得した Cookieを再利用
-        if os.path.exists(cookie_dump) and force == False:
+        if os.path.exists(cookie_dump) and force is False:
 
             with open(cookie_dump, 'rb') as f:
                 cookies = pickle.load(f)
@@ -314,7 +308,7 @@ class JKComment:
 
             # ログインを実行
             url = 'https://account.nicovideo.jp/api/v1/login'
-            post = { 'mail': self.nicologin_mail, 'password': self.nicologin_password }
+            post = {'mail': self.nicologin_mail, 'password': self.nicologin_password}
             session = requests.session()
             session.post(url, post)
 
@@ -323,7 +317,6 @@ class JKComment:
                 pickle.dump(session.cookies, f)
 
             return session.cookies.get('user_session')
-
 
     # 視聴セッションへの接続情報を取得
     def __getWatchSessionInfo(self, live_id):
@@ -335,7 +328,7 @@ class JKComment:
 
             # 番組 ID から HTML を取得
             url = 'https://live2.nicovideo.jp/watch/' + live_id
-            cookie = { 'user_session': user_session }
+            cookie = {'user_session': user_session}
             response = requests.get(url, cookies=cookie).content
 
             # JSON データ (embedded-data) を取得
@@ -350,7 +343,7 @@ class JKComment:
         watchsession_info = get(user_session)
 
         # ログインしていなかったらもう一度ログイン
-        if watchsession_info['user']['isLoggedIn'] == False:
+        if watchsession_info['user']['isLoggedIn'] is False:
 
             # 再ログイン
             user_session = self.__login(True)
@@ -359,20 +352,18 @@ class JKComment:
             watchsession_info = get(user_session)
 
         # もう一度ログインしたのに非ログイン状態なら raise
-        if watchsession_info['user']['isLoggedIn'] == False:
+        if watchsession_info['user']['isLoggedIn'] is False:
             raise LoginError('ログインに失敗しました。メールアドレスまたはパスワードが間違っている可能性があります。')
 
         return watchsession_info
 
-
     # コメントセッションへの接続情報を取得
     def __getCommentSessionInfo(self, watchsession_info):
 
-        if ('webSocketUrl' not in watchsession_info['site']['relive'] or
-            watchsession_info['site']['relive']['webSocketUrl'] == ''):
+        if ('webSocketUrl' not in watchsession_info['site']['relive'] or watchsession_info['site']['relive']['webSocketUrl'] == ''):
             raise SessionError(
-                'コメントセッションへの接続用 WebSocket の取得に失敗しました。\n'\
-                '一般会員でかつ事前にタイムシフトを予約していなかったか、\n'\
+                'コメントセッションへの接続用 WebSocket の取得に失敗しました。\n'
+                '一般会員でかつ事前にタイムシフトを予約していなかったか、\n'
                 '既にタイムシフト公開期間が終了している可能性があります。'
             )
 
@@ -423,14 +414,12 @@ class JKComment:
                 # 部屋情報を返す
                 return response['data']
 
-
     # スクリーンネームの実況 ID から、実際のニコニコチャンネル/コミュニティの ID と種別を取得する
     def __getRealNicoJikkyoID(self, jikkyo_id):
         if jikkyo_id in JKComment.jikkyo_channel_table:
             return JKComment.jikkyo_channel_table[jikkyo_id]
         else:
             return None
-
 
     #  ニコニコチャンネル/コミュニティの ID から、指定された日付に放送されたニコ生の番組 ID を取得する
     def __getNicoLiveID(self, jikkyo_id, date):
@@ -473,7 +462,7 @@ class JKComment:
                 # ON_AIR 状態またはタイムシフトが取得可能であれば追加
                 # タイムシフトが取得不可のものも含めてしまうと無駄な API アクセスが発生するため
                 # live['timeshift']['enabled'] が False の場合、live['timeshift']['can_view'] は要素ごと存在しない
-                if (live['status'] == 'ON_AIR' or (live['timeshift']['enabled'] == True and live['timeshift']['can_view'] == True)):
+                if (live['status'] == 'ON_AIR' or (live['timeshift']['enabled'] is True and live['timeshift']['can_view'] is True)):
                     live_ids.append(live['id'])
 
             # 擬似的にチャンネル側の API レスポンスを再現
@@ -496,7 +485,6 @@ class JKComment:
             # 開始時刻昇順でソート
             items = sorted(items, key=lambda x: x['showTime']['beginAt'])
 
-
         result = []
 
         for item in items:
@@ -506,8 +494,7 @@ class JKComment:
             endAt = datetime.fromisoformat(item['showTime']['endAt'])
 
             # beginAt または endAt の日付と date の日付が一致するなら
-            if (beginAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d') or
-                endAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d')):
+            if (beginAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d') or endAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d')):
 
                 # beginAt が現在時刻より後のものを弾く（取得できないので）
                 if beginAt < datetime.now().astimezone():
@@ -516,14 +503,14 @@ class JKComment:
                     result.append('lv' + str(item['id']))
 
         # 取得終了時刻が現在時刻より後（未来）の場合、当然ながら全部取得できないので注意を出す
-        # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合 
+        # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合
         # astimezone() しないと比較できない👈重要
         date_235959 = (date + timedelta(hours=23, minutes=59, seconds=59)).astimezone()
         if date_235959 > datetime.now().astimezone():
 
             print('-' * shutil.get_terminal_size().columns)  # 行区切り
             print(f"注意: {date.strftime('%Y/%m/%d')} 中の放送が終わっていない番組があります。")
-            print(f"現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。")
+            print('現時点で取得できるコメントのみ取得を試みますが、現在時刻までの不完全なログになります。')
             print(f"{date.strftime('%Y/%m/%d')} 中の放送が終わった後に再取得することを推奨します。")
 
         # 全部回しても取得できなかったら None
@@ -531,7 +518,6 @@ class JKComment:
             return None
         else:
             return result
-
 
     # JSON オブジェクトの過去ログを XML オブジェクトの過去ログに変換
     def __convertToXML(self, comments):
@@ -552,7 +538,7 @@ class JKComment:
             chat.pop('content', '')
 
             # 属性を XML エレメント内の値として取得
-            chat_elemtree = ET.SubElement(elemtree, 'chat', { key: str(value) for key, value in chat.items() })
+            chat_elemtree = ET.SubElement(elemtree, 'chat', {key: str(value) for key, value in chat.items()})
 
             # XML エレメント内の値に以前取得した本文を指定
             chat_elemtree.text = chat_content

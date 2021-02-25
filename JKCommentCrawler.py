@@ -4,15 +4,12 @@ import argparse
 import configparser
 import datetime
 import dateutil.parser
-import json
 import lxml.etree as ET
 import os
-from pprint import pprint
 import shutil
 import sys
 import time
 import traceback
-import xml.dom.minidom as minidom
 
 import JKComment
 
@@ -22,10 +19,10 @@ __version__ = '1.6.0'
 def main():
 
     # 引数解析
-    parser = argparse.ArgumentParser(description = 'ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class = argparse.RawTextHelpFormatter)
-    parser.add_argument('Channel', help = '取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
-    parser.add_argument('Date', help = '取得する日付 (ex: 2020-12-19)')
-    parser.add_argument('-v', '--version', action='version', help = 'バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
+    parser = argparse.ArgumentParser(description='ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('Channel', help='取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
+    parser.add_argument('Date', help='取得する日付 (ex: 2020-12-19)')
+    parser.add_argument('-v', '--version', action='version', help='バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
     args = parser.parse_args()
 
     # 引数
@@ -46,7 +43,6 @@ def main():
     # 行区切り
     print('=' * shutil.get_terminal_size().columns)
 
-
     def get(jikkyo_id, date):
 
         # インスタンスを作成
@@ -64,26 +60,26 @@ def main():
                 comment_xmlobject = jkcomment.getComment(objformat='xml')
                 break  # ループを抜ける
             # 処理中断、次のチャンネルに進む
-            except JKComment.LiveIDError as ex:
+            except JKComment.LiveIDError:
                 print(f"{date.strftime('%Y/%m/%d')} 中に放送された番組が見つかりませんでした。")
                 print('=' * shutil.get_terminal_size().columns)
                 return  # この関数を抜ける
             # 処理中断、終了する
-            except JKComment.JikkyoIDError as ex:
+            except JKComment.JikkyoIDError:
                 print(f"実況チャンネル {jikkyo_id} に該当するニコニコチャンネルまたはコミュニティが見つかりませんでした。")
                 print('=' * shutil.get_terminal_size().columns)
                 return  # この関数を抜ける
             # 捕捉された例外
-            except (JKComment.SessionError, JKComment.ResponseError, JKComment.WebSocketError) as ex:
+            except (JKComment.SessionError, JKComment.ResponseError, JKComment.WebSocketError) as ex1:
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
                 print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id} リトライ回数: {retry_count}", file=sys.stderr)
-                print(f"エラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
+                print(f"エラー: [{ex1.__class__.__name__}] {ex1.args[0]}", file=sys.stderr)
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
             # 捕捉されない例外
-            except Exception as ex:
+            except Exception as ex2:
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
                 print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')} 実況ID: {jikkyo_id} リトライ回数: {retry_count}", file=sys.stderr)
-                print(f"捕捉されないエラー: [{ex.__class__.__name__}] {ex.args[0]}", file=sys.stderr)
+                print(f"捕捉されないエラー: [{ex2.__class__.__name__}] {ex2.args[0]}", file=sys.stderr)
                 traceback.print_exc(file=sys.stderr)
                 print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
 
@@ -140,22 +136,20 @@ def main():
         # 行区切り
         print('=' * shutil.get_terminal_size().columns)
 
-
     # ニコ生がメンテナンス中やサーバーエラーでないかを確認
     nicolive_status, nicolive_status_code = JKComment.JKComment.getNicoLiveStatus()
     if nicolive_status is False:
         print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
         print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}", file=sys.stderr)
         if nicolive_status_code == 500:
-            print(f"エラー: 現在、ニコ生で障害が発生しています。(HTTP Error 500)", file=sys.stderr)
+            print('エラー: 現在、ニコ生で障害が発生しています。(HTTP Error 500)', file=sys.stderr)
         elif nicolive_status_code == 503:
-            print(f"エラー: 現在、ニコ生はメンテナンス中です。(HTTP Error 503)", file=sys.stderr)
+            print('エラー: 現在、ニコ生はメンテナンス中です。(HTTP Error 503)', file=sys.stderr)
         else:
             print(f"エラー: 現在、ニコ生でエラーが発生しています。(HTTP Error {nicolive_status_code})", file=sys.stderr)
         print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
         print('=' * shutil.get_terminal_size().columns)
         sys.exit(1)
-
 
     # コメントデータ（XML）を全てのチャンネル分取得
     if jikkyo_id.lower() == 'all':
