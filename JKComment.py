@@ -127,8 +127,8 @@ class JKComment:
                 # 1000 コメント取得できるまでループ
                 while True:
 
-                    # 8 秒以上でタイムアウト
-                    commentsession.settimeout(8)
+                    # 5 秒以上でタイムアウト
+                    commentsession.settimeout(5)
 
                     # 受信データを取得
                     try:
