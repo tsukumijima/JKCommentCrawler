@@ -87,7 +87,7 @@ class JKComment:
 
             # Sec-WebSocket-Protocol が重要
             try:
-                commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], header={
+                commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], timeout=15, header={
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
                     'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                     'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
@@ -369,7 +369,7 @@ class JKComment:
 
         # User-Agent は標準のだと弾かれる
         try:
-            watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], header={
+            watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], timeout=15, header={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
                 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                 'Sec-WebSocket-Version': '13',
