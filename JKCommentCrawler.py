@@ -153,7 +153,7 @@ def main():
             print(f"エラー: 現在、ニコ生でエラーが発生しています。(HTTP Error {nicolive_status_code})", file=sys.stderr)
         print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
         print('=' * shutil.get_terminal_size().columns)
-        exit(1)
+        sys.exit(1)
 
 
     # コメントデータ（XML）を全てのチャンネル分取得
