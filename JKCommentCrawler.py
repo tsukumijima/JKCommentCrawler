@@ -51,7 +51,8 @@ def main():
 
         # インスタンスを作成
         jkcomment = JKComment.JKComment(jikkyo_id, date, nicologin_mail, nicologin_password)
-        print(f"{date.strftime('%Y/%m/%d')} 中に放送された {JKComment.JKComment.getJikkyoChannelName(jikkyo_id)} のコメントを取得します。")
+        print(f"[{datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}] " +
+              f"{date.strftime('%Y/%m/%d')} 中に放送された {JKComment.JKComment.getJikkyoChannelName(jikkyo_id)} のコメントを取得します。")
 
         # リトライ回数
         retry_maxcount = 3
