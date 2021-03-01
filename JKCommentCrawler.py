@@ -14,14 +14,14 @@ import traceback
 import JKComment
 
 # バージョン情報
-__version__ = '1.6.2'
+__version__ = '1.6.3'
 
 def main():
 
     # 引数解析
     parser = argparse.ArgumentParser(description='ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('Channel', help='取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
-    parser.add_argument('Date', help='取得する日付 (ex: 2020-12-19)')
+    parser.add_argument('Date', help='取得する日付 (ex: 2020/12/19)')
     parser.add_argument('-v', '--version', action='version', help='バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
     args = parser.parse_args()
 
