@@ -93,8 +93,10 @@ class JKComment:
                     'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
                     'Sec-WebSocket-Version': '13',
                 })
-            except ConnectionResetError as ex:
-                raise WebSocketError(f"コメントセッションへの接続がリセットされました。({ex})")
+            except ConnectionResetError as ex1:
+                raise WebSocketError(f"コメントセッションへの接続がリセットされました。({ex1})")
+            except websocket._exceptions.WebSocketTimeoutException as ex2:
+                raise WebSocketError(f"コメントセッションへの接続がタイムアウトしました。({ex2})")
 
             # コメント情報を入れるリスト
             chat = []
@@ -374,8 +376,10 @@ class JKComment:
                 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                 'Sec-WebSocket-Version': '13',
             })
-        except ConnectionResetError as ex:
-            raise WebSocketError(f"視聴セッションへの接続がリセットされました。({ex})")
+        except ConnectionResetError as ex1:
+            raise WebSocketError(f"視聴セッションへの接続がリセットされました。({ex1})")
+        except websocket._exceptions.WebSocketTimeoutException as ex2:
+            raise WebSocketError(f"視聴セッションへの接続がタイムアウトしました。({ex2})")
 
         # 視聴セッションリクエストを送る
         watchsession.send(json.dumps({
