@@ -17,7 +17,7 @@ class JKComment:
     # 実況 ID とチャンネル/コミュニティ ID の対照表
     jikkyo_channel_table = {
         'jk1': {'type': 'channel', 'id': 'ch2646436', 'name': 'NHK総合'},
-        'jk2': {'type': 'channel', 'id': 'ch2646437', 'name': 'NHKEテレ'},
+        'jk2': {'type': 'channel', 'id': 'ch2646437', 'name': 'NHK Eテレ'},
         'jk4': {'type': 'channel', 'id': 'ch2646438', 'name': '日本テレビ'},
         'jk5': {'type': 'channel', 'id': 'ch2646439', 'name': 'テレビ朝日'},
         'jk6': {'type': 'channel', 'id': 'ch2646440', 'name': 'TBSテレビ'},
@@ -26,6 +26,7 @@ class JKComment:
         'jk9': {'type': 'channel', 'id': 'ch2646485', 'name': 'TOKYO MX'},
         'jk10': {'type': 'community', 'id': 'co5253063', 'name': 'テレ玉'},
         'jk11': {'type': 'community', 'id': 'co5215296', 'name': 'tvk'},
+        'jk12': {'type': 'community', 'id': 'co5359761', 'name': 'チバテレビ'},
         'jk101': {'type': 'community', 'id': 'co5214081', 'name': 'NHK BS1'},
         'jk103': {'type': 'community', 'id': 'co5175227', 'name': 'NHK BSプレミアム'},
         'jk141': {'type': 'community', 'id': 'co5175341', 'name': 'BS日テレ'},
