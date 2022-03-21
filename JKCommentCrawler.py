@@ -14,7 +14,7 @@ import traceback
 import JKComment
 
 # バージョン情報
-__version__ = '1.7.0'
+__version__ = '1.7.1'
 
 def main():
 
