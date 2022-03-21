@@ -1,12 +1,12 @@
 
 # JKCommentCrawler
 
-![681](https://user-images.githubusercontent.com/39271166/102918400-2d5bb700-44ca-11eb-8b43-7d5744de8746.png)
+![Screenshot](https://user-images.githubusercontent.com/39271166/102918400-2d5bb700-44ca-11eb-8b43-7d5744de8746.png)
 
 ニコ生に移行した新ニコニコ実況の過去ログを日付ごとに一括で取得・保存するツールです。  
 Nekopanda 氏が公開されている、旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存します。
 
-公式チャンネル ( jk1・jk2・jk4・jk5・jk6・jk7・jk8・jk9・jk101・jk211 ) の放送に加えて、公式では廃止され、現在は [有志のコミュニティ](https://com.nicovideo.jp/community/co5117214) から放送されている NHK BS1・BS11 以外の BS・CS 各局 ( jk103・jk141・jk151・jk161・jk171・jk181・jk191・jk192・jk193・jk222・jk236・jk333 ) 、地デジ独立局 ( jk10・jk11・jk12 ) の過去ログも収集しています。
+公式チャンネル ( jk1・jk2・jk4・jk5・jk6・jk7・jk8・jk9・jk101・jk211 ) の放送に加えて、公式では廃止され、現在は [有志のコミュニティ](https://com.nicovideo.jp/community/co5117214) から放送されている NHK BS1・BS11 以外の BS・CS 各局 ( jk103・jk141・jk151・jk161・jk171・jk181・jk191・jk192・jk193・jk222・jk236・jk252・jk260・jk263・jk265・jk333 ) 、地デジ独立局 ( jk10・jk11・jk12 ) の過去ログも収集しています。
 
 ## 注意
 
@@ -47,7 +47,7 @@ JKCommentCrawler.exe は Windows 用、拡張子なしの JKCommentCrawler は L
 
 Python から普通に実行する場合は、別途依存ライブラリのインストールが必要です。  
 `pip install -r requirements.txt` ( pip が Python2 の事を指すシステムの場合は pip3 ) と実行し、依存ライブラリをインストールします。  
-Python 3.7 で検証しています。Python 2 系は論外として、3.7 未満のバージョンでは動かないかもしれません。
+Python 3.9 で検証しています。Python 2 系は論外として、3.9 未満のバージョンでは動かないかもしれません。
 
 build.sh を実行すればバイナリを自ビルドできますが、PyInstaller と依存ライブラリ諸々が Windows と WSL 側両方に入っている事が前提のため、他の環境でビルドできるかは微妙です。
 
