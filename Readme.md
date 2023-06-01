@@ -38,35 +38,28 @@ JKCommentCrawler を使う前には設定が必要です。まずは JKCommentCr
 
 これで設定は完了です。
 
-### 実行方法
-
-JKCommentCrawler は Python スクリプトですが、わざわざ環境をセットアップするのも少し手間かなと思ったので、単一の実行ファイルにまとめたものも同梱しています。  
-JKCommentCrawler.exe は Windows 用、拡張子なしの JKCommentCrawler は Linux 用の実行ファイルです。  
-こちらのバイナリを使ったほうが手軽ですが、一方で特に Windows の場合、Python から普通に実行するときと比べ起動に数秒時間がかかるというデメリットもあります。  
-このほか Linux 環境では、ツールを実行する前に `chmod` で JKCommentCrawler ファイルに実行許可を付与しておく必要があるかもしれません。
-
-Python から普通に実行する場合は、別途依存ライブラリのインストールが必要です。  
-`pip install -r requirements.txt` ( pip が Python2 の事を指すシステムの場合は pip3 ) と実行し、依存ライブラリをインストールします。  
-Python 3.9 で検証しています。Python 2 系は論外として、3.9 未満のバージョンでは動かないかもしれません。
-
-build.sh を実行すればバイナリを自ビルドできますが、PyInstaller と依存ライブラリ諸々が Windows と WSL 側両方に入っている事が前提のため、他の環境でビルドできるかは微妙です。
-
 ## 使い方
 
-基本の使い方は以下のようになります。  
-ここでは exe 版を使っているものとして説明します。他の実行方法でも拡張子が変わったりなかったりするだけで使い方は同じです。
+事前に pipenv で依存パッケージをインストールしておいてください。  
+以下は Bash の場合の例です。
+
+```bash
+PIPENV_VENV_IN_PROJECT=true pipenv sync
+```
+
+基本の使い方は以下のようになります。
 
 ```
-./JKCommentCrawler.exe jk1 2020/12/16
+pipenv run ./JKCommentCrawler.py jk1 2020/12/16
 ```
 
 `jk1` には実況チャンネル（もし BS11 なら `jk211` ）が、`2020/12/16` には取得したい日の日付が入ります。
 
 前述の通り、コメントは日付単位で保存されます。  
-また、/emotion や /nicoad などの運営コメントは公式プレイヤー以外では再現できず、邪魔になりそうなので削除しています。
+/emotion や /nicoad などの運営コメントも保存されます。
 
 ```
-./JKCommentCrawler.exe all 2020/12/16
+pipenv run ./JKCommentCrawler.py all 2020/12/16
 ```
 
 のように、実況チャンネルの代わりに `all` を指定することもできます。
