@@ -4,12 +4,14 @@ import argparse
 import configparser
 import datetime
 import dateutil.parser
+import json
 import lxml.etree as ET
 import os
 import shutil
 import sys
 import time
 import traceback
+from pathlib import Path
 
 import JKComment
 
@@ -22,6 +24,7 @@ def main():
     parser = argparse.ArgumentParser(description='ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('Channel', help='取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
     parser.add_argument('Date', help='取得する日付 (ex: 2020/12/19)')
+    parser.add_argument('--save-dataset-structure-json', action='store_true', help='過去ログデータのフォルダ/ファイル構造を示す JSON ファイルを出力する')
     parser.add_argument('-f', '--force', action='store_true', help='以前取得したログの方が文字数が多い場合でも上書きする')
     parser.add_argument('-v', '--version', action='version', help='バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
     args = parser.parse_args()
@@ -162,6 +165,26 @@ def main():
     # コメントデータ（XML）を単一チャンネル分取得
     else:
         get(jikkyo_id, date)
+
+    # --save-dataset-structure-json が指定されている場合
+    if args.save_dataset_structure_json is True:
+        def get_directory_contents(directory_path: str, nest: bool = False) -> dict[str, dict[str, dict[str | None]]]:
+            path = Path(directory_path)
+            if not path.exists():
+                raise FileNotFoundError(f'Directory "{directory_path}" does not exist.')
+            data = {}
+            for item in sorted(path.iterdir()):
+                if item.is_dir() and (item.name.startswith('jk') or nest is True):
+                    data[item.name] = get_directory_contents(item, nest=True)
+                elif item.is_file() and nest is True:
+                    data[item.name] = None
+            return data
+
+        data = get_directory_contents(jkcomment_folder)
+        with open(f'{jkcomment_folder}/dataset_structure.json', 'w', encoding='UTF-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        print(f'データセットの構造を {jkcomment_folder}/dataset_structure.json に保存しました。')
+        print('=' * shutil.get_terminal_size().columns)
 
 
 if __name__ == '__main__':
