@@ -16,7 +16,7 @@ from pathlib import Path
 import JKComment
 
 # バージョン情報
-__version__ = '1.8.0'
+__version__ = '1.8.1'
 
 def main():
 

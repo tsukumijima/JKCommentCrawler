@@ -53,7 +53,6 @@ fi
 
 # Hugging Face (KakologArchives) に commit & push する
 cd ${SCRIPT_DIR}/kakolog/
-rm .git/index.lock
 git add .
 git commit -m "Add kakolog until ${current_time}"
 git push
