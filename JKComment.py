@@ -1,15 +1,14 @@
 
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
 import json
 import lxml.etree as ET
 import os
 import pickle
-# import re
 import requests
 import shutil
 import sys
 import websocket
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 
 
 class JKComment:
@@ -93,7 +92,7 @@ class JKComment:
             # Sec-WebSocket-Protocol が重要
             try:
                 commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], timeout=15, header={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
                     'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                     'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
                     'Sec-WebSocket-Version': '13',
@@ -168,9 +167,10 @@ class JKComment:
                             break
 
                 # last_res が -1 → 最後のコメ番自体が存在しない → コメントが一度も存在しないスレッド
-                if last_res == -1:
+                # chat_child が空の場合も同様に判断する
+                if last_res == -1 or len(chat_child) == 0:
                     # 処理を中断して抜ける
-                    print(f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chat))} 件のコメントを取得しました。")
+                    print(f"{self.date.strftime('%Y/%m/%d')} 中の合計 {len(chat)} 件のコメントを取得しました。")
                     break
 
                 # when を取得した最後のコメントのタイムスタンプ + 1 で更新
@@ -377,7 +377,7 @@ class JKComment:
         # User-Agent は標準のだと弾かれる
         try:
             watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], timeout=15, header={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
                 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                 'Sec-WebSocket-Version': '13',
             })

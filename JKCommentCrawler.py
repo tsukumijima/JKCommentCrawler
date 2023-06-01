@@ -22,6 +22,7 @@ def main():
     parser = argparse.ArgumentParser(description='ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('Channel', help='取得する実況チャンネル (ex: jk211)  all を指定すると全チャンネル取得する')
     parser.add_argument('Date', help='取得する日付 (ex: 2020/12/19)')
+    parser.add_argument('-f', '--force', action='store_true', help='以前取得したログの方が文字数が多い場合でも上書きする')
     parser.add_argument('-v', '--version', action='version', help='バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
     args = parser.parse_args()
 
@@ -126,9 +127,11 @@ def main():
             print(f"{date.strftime('%Y/%m/%d')} 中のコメントが 0 件のため、ログの保存をスキップします。")
         # 以前取得したログの方が今取得したログよりも文字数が多いとき
         # タイムシフトの公開期限が終了したなどの理由で以前よりもログ取得が少なくなる場合に上書きしないようにする
-        elif filelength > len(comment_xml):
-            print('以前取得したログの方が文字数が多いため、ログの保存をスキップします。')
+        elif filelength > len(comment_xml) and args.force is False:
+            print(f'以前取得したログの方が文字数が多いため、ログの保存をスキップします。(以前: {filelength}文字, 今回: {len(comment_xml)}文字)')
         else:
+            if filelength > len(comment_xml) and args.force is True:
+                print(f'以前取得したログの方が文字数が多いですが、--force が指定されているため、ログを上書き保存します。(以前: {filelength}文字, 今回: {len(comment_xml)}文字)')
             with open(filename, 'w', encoding='UTF-8') as f:
                 f.write(comment_xml)
                 print(f"ログを {filename} に保存しました。")
