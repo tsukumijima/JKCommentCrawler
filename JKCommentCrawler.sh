@@ -52,10 +52,16 @@ else
 fi
 
 # Hugging Face (KakologArchives) に commit & push する
+# 5分ごとの実行のみ、コミット数削減のため --amend で直前のコミットを上書きした上で force push する
 cd ${SCRIPT_DIR}/kakolog/
 git add .
-git commit -m "Add kakolog until ${current_time}"
-git push
+if [[ $1 = 'cron_minutes' ]]; then
+    git commit -m "Add kakolog until ${current_time}" --amend
+    git push -f
+else
+    git commit -m "Add kakolog until ${current_time}"
+    git push
+fi
 
 # 不要な LFS オブジェクトを削除する
 ## --verify-remote で、リモートに存在することを確認してから削除する
