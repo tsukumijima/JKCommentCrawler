@@ -6,6 +6,7 @@ import pickle
 import requests
 import shutil
 import sys
+import traceback
 import websocket
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -107,8 +108,13 @@ class JKComment:
                 })
             except ConnectionResetError as ex1:
                 raise WebSocketError(f"コメントセッションへの接続がリセットされました。({ex1})")
-            except websocket._exceptions.WebSocketTimeoutException as ex2:
-                raise WebSocketError(f"コメントセッションへの接続がタイムアウトしました。({ex2})")
+            except websocket.WebSocketConnectionClosedException as ex2:
+                raise WebSocketError(f"コメントセッションへの接続が閉じられました。({ex2})")
+            except websocket.WebSocketTimeoutException as ex3:
+                raise WebSocketError(f"コメントセッションへの接続がタイムアウトしました。({ex3})")
+            except Exception as ex4:
+                print(traceback.format_exc(), file=sys.stderr)
+                raise WebSocketError(f"コメントセッションへの接続に失敗しました。({ex4})")
 
             # コメント情報を入れるリスト
             chat = []
@@ -150,11 +156,14 @@ class JKComment:
                         response_raw = commentsession.recv()
                         response = json.loads(response_raw)
                     # タイムアウトした（＝これ以上コメントは返ってこない）のでループを抜ける
-                    except websocket._exceptions.WebSocketTimeoutException:
+                    except websocket.WebSocketTimeoutException:
                         break
                     # JSON デコードに失敗
                     except json.decoder.JSONDecodeError:
                         raise WebSocketError(f"受信データ '{response_raw}' を JSON としてデコードできません。")
+                    except Exception as ex:
+                        print(traceback.format_exc(), file=sys.stderr)
+                        raise WebSocketError(f"コメントセッションからの受信中に予期せぬエラーが発生しました。({ex})")
 
                     # スレッド情報
                     if 'thread' in response:
@@ -401,8 +410,13 @@ class JKComment:
             })
         except ConnectionResetError as ex1:
             raise WebSocketError(f"視聴セッションへの接続がリセットされました。({ex1})")
-        except websocket._exceptions.WebSocketTimeoutException as ex2:
-            raise WebSocketError(f"視聴セッションへの接続がタイムアウトしました。({ex2})")
+        except websocket.WebSocketConnectionClosedException as ex2:
+            raise WebSocketError(f"視聴セッションへの接続が閉じられました。({ex2})")
+        except websocket.WebSocketTimeoutException as ex3:
+            raise WebSocketError(f"視聴セッションへの接続がタイムアウトしました。({ex3})")
+        except Exception as ex4:
+            print(traceback.format_exc(), file=sys.stderr)
+            raise WebSocketError(f"視聴セッションへの接続に失敗しました。({ex4})")
 
         # 視聴セッションリクエストを送る
         watchsession.send(json.dumps({
@@ -432,6 +446,9 @@ class JKComment:
             # JSON デコードに失敗
             except json.decoder.JSONDecodeError:
                 raise WebSocketError(f"受信データ '{response_raw}' を JSON としてデコードできません。")
+            except Exception as ex:
+                print(traceback.format_exc(), file=sys.stderr)
+                raise WebSocketError(f"視聴セッションからの受信中に予期せぬエラーが発生しました。({ex})")
 
             # 部屋情報
             if response['type'] == 'room':
