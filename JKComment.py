@@ -336,10 +336,13 @@ class JKComment:
             # 番組 ID から HTML を取得
             url = 'https://live2.nicovideo.jp/watch/' + live_id
             cookie = {'user_session': user_session}
-            response = requests.get(url, cookies=cookie).content
+            response = requests.get(url, cookies=cookie)
+
+            if response.status_code != 200:
+                raise ResponseError(f'視聴ページの取得に失敗しました。(HTTP Error {response.status_code})')
 
             # JSON データ (embedded-data) を取得
-            soup = BeautifulSoup(response, 'html.parser')
+            soup = BeautifulSoup(response.content, 'html.parser')
 
             if len(soup.select('script#embedded-data')) == 0:
                 raise ResponseError('視聴ページの取得に失敗しました。メンテナンス中かもしれません。')
@@ -443,14 +446,17 @@ class JKComment:
 
             # API にアクセス
             api_url = f"https://public.api.nicovideo.jp/v1/channel/channelapp/channels/{jikkyo_data['id'][2:]}/lives.json?sort=channelpage"
-            api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
+            api_response = requests.get(api_url)
+            if api_response.status_code != 200:
+                raise ResponseError(f'public.api.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
-            if 'data' not in api_response:
+            api_response_json = json.loads(api_response.content)  # ch とか co を削ぎ落としてから
+            if 'data' not in api_response_json:
                 raise ResponseError('public.api.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
             # アイテムをソート
             # 参考: https://note.nkmk.me/python-dict-list-sort/
-            items = api_response['data']
+            items = api_response_json['data']
             items = sorted(items, key=lambda x: x['showTime']['beginAt'])  # 開始時刻昇順でソート
 
         # ニコニコミュニティのみ
@@ -461,13 +467,16 @@ class JKComment:
 
             # API にアクセス
             api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
-            api_response = json.loads(requests.get(api_url).content)  # ch とか co を削ぎ落としてから
+            api_response = requests.get(api_url)
+            if api_response.status_code != 200:
+                raise ResponseError(f'com.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
-            if 'data' not in api_response:
+            api_response_json = json.loads(api_response.content)  # ch とか co を削ぎ落としてから
+            if 'data' not in api_response_json:
                 raise ResponseError('com.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
             # 放送 ID を抽出
-            for live in api_response['data']['lives']:
+            for live in api_response_json['data']['lives']:
                 # ON_AIR 状態またはタイムシフトが取得可能であれば追加
                 # タイムシフトが取得不可のものも含めてしまうと無駄な API アクセスが発生するため
                 # live['timeshift']['enabled'] が False の場合、live['timeshift']['can_view'] は要素ごと存在しない
@@ -480,16 +489,19 @@ class JKComment:
 
                 # API にアクセス
                 api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
-                api_response = json.loads(requests.get(api_url).content)
+                api_response = requests.get(api_url)
+                if api_response.status_code != 200:
+                    raise ResponseError(f'api.cas.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
-                if ('data' not in api_response) or ('id' not in api_response['data']):
+                api_response_json = json.loads(api_response.content)
+                if ('data' not in api_response_json) or ('id' not in api_response_json['data']):
                     raise ResponseError('api.cas.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
                 # なぜかこの API は ID が文字列なので、互換にするために数値に変換
-                api_response['data']['id'] = int(api_response['data']['id'].replace('lv', ''))
+                api_response_json['data']['id'] = int(api_response_json['data']['id'].replace('lv', ''))
 
                 # items にレスポンスデータを入れる
-                items.append(api_response['data'])
+                items.append(api_response_json['data'])
 
             # 開始時刻昇順でソート
             items = sorted(items, key=lambda x: x['showTime']['beginAt'])
