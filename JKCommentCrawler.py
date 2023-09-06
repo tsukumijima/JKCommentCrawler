@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 
 import argparse
 import configparser
@@ -15,8 +15,6 @@ from pathlib import Path
 
 import JKComment
 
-# バージョン情報
-__version__ = '1.8.1'
 
 def main():
 
@@ -26,7 +24,7 @@ def main():
     parser.add_argument('Date', help='取得する日付 (ex: 2020/12/19)')
     parser.add_argument('--save-dataset-structure-json', action='store_true', help='過去ログデータのフォルダ/ファイル構造を示す JSON ファイルを出力する')
     parser.add_argument('-f', '--force', action='store_true', help='以前取得したログの方が文字数が多い場合でも上書きする')
-    parser.add_argument('-v', '--version', action='version', help='バージョン情報を表示する', version='JKCommentCrawler version ' + __version__)
+    parser.add_argument('-v', '--version', action='version', help='バージョン情報を表示する', version='JKCommentCrawler version ' + JKComment.__version__)
     args = parser.parse_args()
 
     # 引数

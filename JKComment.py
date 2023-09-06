@@ -12,7 +12,14 @@ from datetime import datetime, timedelta
 from typing import Any
 
 
+# バージョン情報
+__version__ = '1.8.1'
+
+
 class JKComment:
+
+    # User-Agent
+    user_agent = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 JKCommentCrawler/{__version__}'
 
     # 実況 ID とチャンネル/コミュニティ ID の対照表
     jikkyo_channel_table = {
@@ -93,7 +100,7 @@ class JKComment:
             # Sec-WebSocket-Protocol が重要
             try:
                 commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], timeout=15, header={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
+                    'User-Agent': JKComment.user_agent,
                     'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                     'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
                     'Sec-WebSocket-Version': '13',
@@ -294,7 +301,7 @@ class JKComment:
     @staticmethod
     def getNicoLiveStatus():
         nicolive_url = 'https://live.nicovideo.jp/'
-        response = requests.get(nicolive_url)  # レスポンスを取得
+        response = requests.get(nicolive_url, headers={'User-Agent': JKComment.user_agent})
         # HTTP ステータスコードで判定
         if response.status_code == 200:
             return [True, response.status_code]
@@ -319,7 +326,7 @@ class JKComment:
             url = 'https://account.nicovideo.jp/api/v1/login'
             post = {'mail': self.nicologin_mail, 'password': self.nicologin_password}
             session = requests.session()
-            session.post(url, post)
+            session.post(url, post, headers={'User-Agent': JKComment.user_agent})
 
             # Cookie を保存
             with open(cookie_dump, 'wb') as f:
@@ -338,7 +345,7 @@ class JKComment:
             # 番組 ID から HTML を取得
             url = 'https://live2.nicovideo.jp/watch/' + live_id
             cookie = {'user_session': user_session}
-            response = requests.get(url, cookies=cookie)
+            response = requests.get(url, cookies=cookie, headers={'User-Agent': JKComment.user_agent})
 
             if response.status_code != 200:
                 raise ResponseError(f'視聴ページの取得に失敗しました。(HTTP Error {response.status_code})')
@@ -388,7 +395,7 @@ class JKComment:
         # User-Agent は標準のだと弾かれる
         try:
             watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], timeout=15, header={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
                 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                 'Sec-WebSocket-Version': '13',
             })
@@ -463,7 +470,7 @@ class JKComment:
 
             # 過去番組の ID をスクレイピングで取得
             api_url = f'https://sp.ch.nicovideo.jp/api/past_lives/?page=1&channel_id={jikkyo_data["id"]}'
-            api_response = requests.get(api_url)
+            api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
             if api_response.status_code != 200:
                 raise Exception(f'sp.ch.nicovideo.jp へのリクエストに失敗しました。(HTTP Error {api_response.status_code})')
             soup = BeautifulSoup(api_response.content, 'html.parser')
@@ -477,7 +484,7 @@ class JKComment:
 
             # API にアクセス
             api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
-            api_response = requests.get(api_url)
+            api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
             if api_response.status_code != 200:
                 raise ResponseError(f'com.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
@@ -497,7 +504,7 @@ class JKComment:
 
             # API にアクセス
             api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
-            api_response = requests.get(api_url)
+            api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
             if api_response.status_code != 200:
                 raise ResponseError(f'api.cas.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
