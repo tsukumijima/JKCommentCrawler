@@ -73,7 +73,7 @@ class JKComment:
             begintime = watchsession_info['program']['beginTime']
             endtime = watchsession_info['program']['endTime']
             print('-' * shutil.get_terminal_size().columns)
-            print(f"番組タイトル: {watchsession_info['program']['title']}")
+            print(f"番組タイトル: {watchsession_info['program']['title']} ({watchsession_info['program']['nicoliveProgramId']})")
             print(f"番組開始時刻: {datetime.fromtimestamp(begintime).strftime('%Y/%m/%d %H:%M:%S')}  " +
                   f"番組終了時刻: {datetime.fromtimestamp(endtime).strftime('%Y/%m/%d %H:%M:%S')}")
 
@@ -450,30 +450,30 @@ class JKComment:
         if jikkyo_data is None:
             raise JikkyoIDError('指定された実況 ID は存在しません。')
 
-        items: list[dict[str, Any]] = []
+        live_program_infos: list[dict[str, Any]] = []
+        live_ids: list[str] = []
 
         # ニコニコチャンネルのみ
         if jikkyo_data['type'] == 'channel':
 
-            # API にアクセス
-            api_url = f"https://public.api.nicovideo.jp/v1/channel/channelapp/channels/{jikkyo_data['id'][2:]}/lives.json?sort=channelpage"
+            # 放送中番組の ID を取得
+            ## 実際にリクエストされる URL: https://live2.nicovideo.jp/watch/ch2646436 (番組 ID の代わりにチャンネル ID を指定)
+            watchsession_info = self.__getWatchSessionInfo(jikkyo_data['id'])
+            live_ids.append(watchsession_info['program']['nicoliveProgramId'])
+
+            # 過去番組の ID をスクレイピングで取得
+            api_url = f'https://sp.ch.nicovideo.jp/api/past_lives/?page=1&channel_id={jikkyo_data["id"]}'
             api_response = requests.get(api_url)
             if api_response.status_code != 200:
-                raise ResponseError(f'public.api.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
-
-            api_response_json = json.loads(api_response.content)  # ch とか co を削ぎ落としてから
-            if 'data' not in api_response_json:
-                raise ResponseError('public.api.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
-
-            # アイテムをソート
-            # 参考: https://note.nkmk.me/python-dict-list-sort/
-            items = api_response_json['data']
-            items = sorted(items, key=lambda x: x['showTime']['beginAt'])  # 開始時刻昇順でソート
+                raise Exception(f'sp.ch.nicovideo.jp へのリクエストに失敗しました。(HTTP Error {api_response.status_code})')
+            soup = BeautifulSoup(api_response.content, 'html.parser')
+            for a_tag in soup.find_all('a', href=True):
+                href = a_tag['href']
+                if 'https://live.nicovideo.jp/watch/' in href:
+                    live_ids.append(href.split('/')[-1])
 
         # ニコニコミュニティのみ
         elif jikkyo_data['type'] == 'community':
-
-            live_ids = []
 
             # API にアクセス
             api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
@@ -493,36 +493,34 @@ class JKComment:
                 if (live['status'] == 'ON_AIR' or (live['timeshift']['enabled'] is True and live['timeshift']['can_view'] is True)):
                     live_ids.append(live['id'])
 
-            # 擬似的にチャンネル側の API レスポンスを再現
-            # その方が把握しやすいので
-            for live_id in live_ids:
+        for live_id in live_ids:
 
-                # API にアクセス
-                api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
-                api_response = requests.get(api_url)
-                if api_response.status_code != 200:
-                    raise ResponseError(f'api.cas.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
+            # API にアクセス
+            api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
+            api_response = requests.get(api_url)
+            if api_response.status_code != 200:
+                raise ResponseError(f'api.cas.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
-                api_response_json = json.loads(api_response.content)
-                if ('data' not in api_response_json) or ('id' not in api_response_json['data']):
-                    raise ResponseError('api.cas.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
+            api_response_json = json.loads(api_response.content)
+            if ('data' not in api_response_json) or ('id' not in api_response_json['data']):
+                raise ResponseError('api.cas.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
-                # なぜかこの API は ID が文字列なので、互換にするために数値に変換
-                api_response_json['data']['id'] = int(api_response_json['data']['id'].replace('lv', ''))
+            # なぜかこの API は ID が文字列なので、互換にするために数値に変換
+            api_response_json['data']['id'] = int(api_response_json['data']['id'].replace('lv', ''))
 
-                # items にレスポンスデータを入れる
-                items.append(api_response_json['data'])
+            # live_program_infos にレスポンスデータを入れる
+            live_program_infos.append(api_response_json['data'])
 
-            # 開始時刻昇順でソート
-            items = sorted(items, key=lambda x: x['showTime']['beginAt'])
+        # 開始時刻昇順でソート
+        live_program_infos = sorted(live_program_infos, key=lambda x: x['showTime']['beginAt'])
 
         result: list[str] = []
 
-        for item in items:
+        for live_program_info in live_program_infos:
 
             # ISO8601 フォーマットを datetime に変換しておく
-            beginAt = datetime.fromisoformat(item['showTime']['beginAt'])
-            endAt = datetime.fromisoformat(item['showTime']['endAt'])
+            beginAt = datetime.fromisoformat(live_program_info['showTime']['beginAt'])
+            endAt = datetime.fromisoformat(live_program_info['showTime']['endAt'])
 
             # beginAt または endAt の日付と date の日付が一致するなら
             if (beginAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d') or endAt.strftime('%Y/%m/%d') == date.strftime('%Y/%m/%d')):
@@ -531,7 +529,7 @@ class JKComment:
                 if beginAt < datetime.now().astimezone():
 
                     # 番組 ID を返す
-                    result.append('lv' + str(item['id']))
+                    result.append('lv' + str(live_program_info['id']))
 
         # 取得終了時刻が現在時刻より後（未来）の場合、当然ながら全部取得できないので注意を出す
         # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合
