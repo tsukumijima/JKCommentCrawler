@@ -8,6 +8,10 @@ Nekopanda 氏が公開されている、旧ニコニコ実況の過去ログデ�
 
 公式チャンネル ( jk1・jk2・jk4・jk5・jk6・jk7・jk8・jk9・jk101・jk211 ) の放送に加えて、公式では廃止され、現在は [有志のコミュニティ](https://com.nicovideo.jp/community/co5117214) から放送されている NHK BS1・BS11 以外の BS・CS 各局 ( jk103・jk141・jk151・jk161・jk171・jk181・jk191・jk192・jk193・jk222・jk236・jk252・jk260・jk263・jk265・jk333 ) 、地デジ独立局 ( jk10・jk11・jk12 ) の過去ログも収集しています。
 
+> **Warning**  
+> 「ニコニコチャンネル」アプリのサービス終了に伴い `https://public.api.nicovideo.jp/v1/channel/channelapp/channels/<channelId>/lives.json?sort=channelpage` が廃止された関係で、**JKCommentCrawler v1.8.1 以前のバージョンでは、公式チャンネルの過去ログを取得できなくなっています。**  
+> **JKCommentCrawler v1.8.1 以前のバージョンをお使いの方は、必ず v1.9.0 以降にアップデートしてください！**
+
 ## 注意
 
 - このツールは 3 週間で消えてしまう新ニコニコ実況の過去ログを一括で収集するために作られたものです。  
