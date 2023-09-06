@@ -137,6 +137,7 @@ class JKComment:
                     commentsession.settimeout(5)
 
                     # 受信データを取得
+                    response_raw = 'Unknown'
                     try:
                         response_raw = commentsession.recv()
                         response = json.loads(response_raw)
@@ -345,9 +346,15 @@ class JKComment:
             soup = BeautifulSoup(response.content, 'html.parser')
 
             if len(soup.select('script#embedded-data')) == 0:
-                raise ResponseError('視聴ページの取得に失敗しました。メンテナンス中かもしれません。')
+                raise ResponseError('視聴ページからの embedded-data の取得に失敗しました。メンテナンス中かもしれません。')
 
-            return json.loads(soup.select('script#embedded-data')[0].get('data-props'))
+            json_raw = soup.select('script#embedded-data')[0].get('data-props', None)
+            if json_raw is None:
+                raise ResponseError('視聴ページからの embedded-data.data-props の取得に失敗しました。メンテナンス中かもしれません。')
+            if type(json_raw) is list:
+                json_raw = json_raw[0]
+
+            return json.loads(json_raw)
 
         # 情報を取得
         watchsession_info = get(user_session)
@@ -410,6 +417,7 @@ class JKComment:
         while True:
 
             # 受信データを取得
+            response_raw = 'Unknown'
             try:
                 response_raw = watchsession.recv()
                 response = json.loads(response_raw)

@@ -168,14 +168,14 @@ def main():
 
     # --save-dataset-structure-json が指定されている場合
     if args.save_dataset_structure_json is True:
-        def get_directory_contents(directory_path: str, nest: bool = False) -> dict[str, dict[str, dict[str | None]]]:
+        def get_directory_contents(directory_path: str, nest: bool = False) -> dict[str, dict[str, dict[str, None]]]:
             path = Path(directory_path)
             if not path.exists():
                 raise FileNotFoundError(f'Directory "{directory_path}" does not exist.')
             data = {}
             for item in sorted(path.iterdir()):
                 if item.is_dir() and (item.name.startswith('jk') or nest is True):
-                    data[item.name] = get_directory_contents(item, nest=True)
+                    data[item.name] = get_directory_contents(str(item), nest=True)
                 elif item.is_file() and nest is True:
                     data[item.name] = None
             return data
