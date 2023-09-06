@@ -9,6 +9,7 @@ import sys
 import websocket
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from typing import Any
 
 
 class JKComment:
@@ -449,6 +450,8 @@ class JKComment:
         if jikkyo_data is None:
             raise JikkyoIDError('指定された実況 ID は存在しません。')
 
+        items: list[dict[str, Any]] = []
+
         # ニコニコチャンネルのみ
         if jikkyo_data['type'] == 'channel':
 
@@ -471,7 +474,6 @@ class JKComment:
         elif jikkyo_data['type'] == 'community':
 
             live_ids = []
-            items = []
 
             # API にアクセス
             api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
@@ -514,7 +516,7 @@ class JKComment:
             # 開始時刻昇順でソート
             items = sorted(items, key=lambda x: x['showTime']['beginAt'])
 
-        result = []
+        result: list[str] = []
 
         for item in items:
 
