@@ -20,7 +20,7 @@ __version__ = '1.9.0'
 class JKComment:
 
     # User-Agent
-    user_agent = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 JKCommentCrawler/{__version__}'
+    user_agent = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 JKCommentCrawler/{__version__}'
 
     # 実況 ID とチャンネル/コミュニティ ID の対照表
     jikkyo_channel_table = {
@@ -36,7 +36,7 @@ class JKComment:
         'jk11': {'type': 'community', 'id': 'co5215296', 'name': 'tvk'},
         'jk12': {'type': 'community', 'id': 'co5359761', 'name': 'チバテレビ'},
         'jk101': {'type': 'channel', 'id': 'ch2647992', 'name': 'NHK BS1'},
-        'jk103': {'type': 'community', 'id': 'co5175227', 'name': 'NHK BSプレミアム'},
+        # 'jk103': {'type': 'community', 'id': 'co5175227', 'name': 'NHK BSプレミアム'},
         'jk141': {'type': 'community', 'id': 'co5175341', 'name': 'BS日テレ'},
         'jk151': {'type': 'community', 'id': 'co5175345', 'name': 'BS朝日'},
         'jk161': {'type': 'community', 'id': 'co5176119', 'name': 'BS-TBS'},
