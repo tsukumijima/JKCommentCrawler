@@ -486,15 +486,19 @@ class JKComment:
             live_ids.append(watchsession_info['program']['nicoliveProgramId'])
 
             # 過去番組の ID をスクレイピングで取得
-            api_url = f'https://sp.ch.nicovideo.jp/api/past_lives/?page=1&channel_id={jikkyo_data["id"]}'
-            api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
-            if api_response.status_code != 200:
-                raise Exception(f'sp.ch.nicovideo.jp へのリクエストに失敗しました。(HTTP Error {api_response.status_code})')
-            soup = BeautifulSoup(api_response.content, 'html.parser')
-            for a_tag in soup.find_all('a', href=True):
-                href = a_tag['href']
-                if 'https://live.nicovideo.jp/watch/' in href:
-                    live_ids.append(href.split('/')[-1])
+            for page in range(1, 3):  # 1 ページ目と 2 ページ目を取得
+                api_url = f'https://sp.ch.nicovideo.jp/api/past_lives/?page={page}&channel_id={jikkyo_data["id"]}'
+                api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
+                if api_response.status_code != 200:
+                    if page == 1:
+                        raise Exception(f'sp.ch.nicovideo.jp へのリクエストに失敗しました。(HTTP Error {api_response.status_code})')
+                    else:
+                        break  # 2 ページ目が取得できなかった場合はループを抜ける
+                soup = BeautifulSoup(api_response.content, 'html.parser')
+                for a_tag in soup.find_all('a', href=True):
+                    href = a_tag['href']
+                    if 'https://live.nicovideo.jp/watch/' in href:
+                        live_ids.append(href.split('/')[-1])
 
         # ニコニコミュニティのみ
         elif jikkyo_data['type'] == 'community':
