@@ -69,7 +69,7 @@ class JKComment:
 
     # コメントセッションに接続してコメントを取得する
     # format は xml または json のいずれか
-    def getComment(self, format: str = 'xml') -> Union[ET.Element, list[dict[str, Any]]]:
+    def getComment(self, format: str = 'xml') -> Union[ET._Element, list[dict[str, Any]]]:
 
         # 番組単体でコメントを取得する
         def getCommentOne(live_id: str) -> list[dict[str, Any]]:
@@ -582,10 +582,10 @@ class JKComment:
             return result
 
     # JSON オブジェクトの過去ログを XML オブジェクトの過去ログに変換
-    def __convertToXML(self, comments: list[dict[str, Any]]) -> ET.Element:
+    def __convertToXML(self, comments: list[dict[str, Any]]) -> ET._Element:
 
         # XML のエレメントツリー
-        elemtree = ET.Element('packet')
+        elem_tree = ET.Element('packet')
 
         # コメントごとに
         for comment in comments:
@@ -600,12 +600,12 @@ class JKComment:
             chat.pop('content', '')
 
             # 属性を XML エレメント内の値として取得
-            chat_elemtree = ET.SubElement(elemtree, 'chat', {key: str(value) for key, value in chat.items()})
+            chat_elem_tree = ET.SubElement(elem_tree, 'chat', {key: str(value) for key, value in chat.items()})
 
             # XML エレメント内の値に以前取得した本文を指定
-            chat_elemtree.text = chat_content
+            chat_elem_tree.text = chat_content
 
-        return elemtree
+        return elem_tree
 
 
 # 例外定義

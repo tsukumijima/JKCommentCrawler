@@ -12,6 +12,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from typing import Any, cast
 
 import JKComment
 
@@ -55,6 +56,7 @@ def main() -> None:
         # リトライ回数
         retry_maxcount = 3
         retry_count = 1
+        comment_xml_object: ET._Element | list[dict[str, Any]] = []
         while (retry_count <= retry_maxcount):
 
             # コメントデータ（XML）を取得
@@ -103,14 +105,14 @@ def main() -> None:
         # XML をフォーマットする
         # lxml.etree を使うことで属性の順序を保持できる
         # 参考: https://banatech.net/blog/view/19
-        def format_xml(elem: ET.Element) -> str:
+        def format_xml(elem: ET._Element) -> str:
             # xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
             xml = ET.tostring(elem, encoding='UTF-8', pretty_print=True).decode('UTF-8').replace('>\n  ', '>\n')  # インデントを除去
             xml = xml.replace('<packet>\n', '').replace('</packet>', '').replace('<packet/>', '')
             return xml.rstrip()
 
         # XML にフォーマット
-        comment_xml = format_xml(comment_xml_object)
+        comment_xml = format_xml(cast(ET._Element, comment_xml_object))
 
         # ファイル名・フォルダ
         os.makedirs(f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/", exist_ok=True)
