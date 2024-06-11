@@ -10,7 +10,7 @@ import traceback
 import websocket
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 
 # バージョン情報
@@ -56,6 +56,9 @@ class JKComment:
     }
 
     def __init__(self, jikkyo_id: str, date: datetime, nicologin_mail: str, nicologin_password: str):
+        """
+        コメントセッションに接続してコメントを取得する
+        """
 
         # 実況 ID
         self.jikkyo_id = jikkyo_id
@@ -67,9 +70,12 @@ class JKComment:
         self.nicologin_mail = nicologin_mail
         self.nicologin_password = nicologin_password
 
-    # コメントセッションに接続してコメントを取得する
-    # format は xml または json のいずれか
-    def getComment(self, format: str = 'xml') -> Union[ET._Element, list[dict[str, Any]]]:
+
+    def getComment(self, format: Literal['xml', 'json'] = 'xml') -> Union[ET._Element, list[dict[str, Any]]]:
+        """
+        コメントセッションに接続してコメントを取得する
+        format は xml または json のいずれか
+        """
 
         # 番組単体でコメントを取得する
         def getCommentOne(live_id: str) -> list[dict[str, Any]]:
@@ -248,11 +254,6 @@ class JKComment:
             # 番組単体で取得したコメントを返す
             return chat
 
-        # フォーマット
-        format = format.lower()
-        if format != 'xml' and format != 'json':
-            raise FormatError('不正なフォーマットです。')
-
         # 番組 ID らを取得
         # 指定された日付内に放送された全ての番組からコメントを取得するので複数入ることがある
         live_ids = self.__getNicoLiveID(self.jikkyo_id, self.date)
@@ -294,22 +295,33 @@ class JKComment:
             # 取得したコメントをそのまま返す
             return chat
 
-    # 実況 ID リストを取得
+
     @staticmethod
     def getJikkyoChannelList() -> list[str]:
+        """
+        実況 ID リストを取得する
+        """
+
         return list(JKComment.jikkyo_channel_table.keys())
 
-    # 実況チャンネル名を取得
+
     @staticmethod
     def getJikkyoChannelName(jikkyo_id: str) -> Optional[str]:
+        """
+        実況 ID から実況チャンネル名を取得する
+        """
+
         if jikkyo_id in JKComment.jikkyo_channel_table:
             return JKComment.jikkyo_channel_table[jikkyo_id]['name']
         else:
             return None
 
-    # ニコ生がメンテナンス中やサーバーエラーでないかを確認
     @staticmethod
     def getNicoLiveStatus() -> list[Union[bool, int]]:
+        """
+        ニコ生がメンテナンス中やサーバーエラーでないかを確認する
+        """
+
         nicolive_url = 'https://live.nicovideo.jp/'
         response = requests.get(nicolive_url, headers={'User-Agent': JKComment.user_agent})
         # HTTP ステータスコードで判定
@@ -318,8 +330,11 @@ class JKComment:
         else:
             return [False, response.status_code]
 
-    # ニコニコにログインする
+
     def __login(self, force: bool = False) -> Optional[str]:
+        """
+        ニコニコにログインする
+        """
 
         cookie_dump = os.path.dirname(os.path.abspath(sys.argv[0])) + '/cookie.dump'
 
@@ -344,8 +359,10 @@ class JKComment:
 
             return session.cookies.get('user_session')
 
-    # 視聴セッションへの接続情報を取得
     def __getWatchSessionInfo(self, live_id: str) -> dict[str, Any]:
+        """
+        視聴セッションへの接続情報を取得する
+        """
 
         # 予めログインしておく
         user_session: Optional[str] = self.__login()
@@ -396,8 +413,11 @@ class JKComment:
 
         return watchsession_info
 
-    # コメントセッションへの接続情報を取得
+
     def __getCommentSessionInfo(self, watchsession_info: dict[str, Any]) -> dict[str, Any]:
+        """
+        視聴セッション情報からコメントセッションへの接続情報を取得する
+        """
 
         if ('webSocketUrl' not in watchsession_info['site']['relive'] or watchsession_info['site']['relive']['webSocketUrl'] == ''):
             raise SessionError(
@@ -424,19 +444,10 @@ class JKComment:
             raise WebSocketError(f"視聴セッションへの接続に失敗しました。({ex4})")
 
         # 視聴セッションリクエストを送る
+        # 'stream' はニコ生のサーバー負荷を軽減するために省略すべき
         watchsession.send(json.dumps({
             'type': 'startWatching',
             'data': {
-                'stream': {
-                    'quality': 'super_high',
-                    'protocol': 'hls',
-                    'latency': 'low',
-                    'chasePlay': False,
-                },
-                'room': {
-                    'protocol': 'webSocket',
-                    'commentable': True,
-                },
                 'reconnect': False,
             },
         }))
@@ -464,15 +475,22 @@ class JKComment:
                 # 部屋情報を返す
                 return response['data']
 
-    # スクリーンネームの実況 ID から、実際のニコニコチャンネル/コミュニティの ID と種別を取得する
+
     def __getRealNicoJikkyoID(self, jikkyo_id: str) -> Optional[dict[str, Any]]:
+        """
+        スクリーンネームの実況 ID から、実際のニコニコチャンネル/コミュニティの ID と種別を取得する
+        """
+
         if jikkyo_id in JKComment.jikkyo_channel_table:
             return JKComment.jikkyo_channel_table[jikkyo_id]
         else:
             return None
 
-    #  ニコニコチャンネル/コミュニティの ID から、指定された日付に放送されたニコ生の番組 ID を取得する
+
     def __getNicoLiveID(self, jikkyo_id: str, date: datetime) -> Optional[list[str]]:
+        """
+        ニコニコチャンネル/コミュニティの ID から、指定された日付に放送されたニコ生の番組 ID を取得する
+        """
 
         # 実際のニコニコチャンネル/コミュニティの ID と種別を取得
         jikkyo_data = self.__getRealNicoJikkyoID(jikkyo_id)
@@ -581,8 +599,11 @@ class JKComment:
         else:
             return result
 
-    # JSON オブジェクトの過去ログを XML オブジェクトの過去ログに変換
+
     def __convertToXML(self, comments: list[dict[str, Any]]) -> ET._Element:
+        """
+        コメントの JSON オブジェクトを XML オブジェクトに変換する
+        """
 
         # XML のエレメントツリー
         elem_tree = ET.Element('packet')
@@ -609,8 +630,6 @@ class JKComment:
 
 
 # 例外定義
-class FormatError(Exception):
-    pass
 class JikkyoIDError(Exception):
     pass
 class LiveIDError(Exception):
