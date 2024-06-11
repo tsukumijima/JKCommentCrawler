@@ -84,25 +84,25 @@ class JKComment:
             watchsession_info = self.__getWatchSessionInfo(live_id)
 
             # 開始・終了時間
-            begintime = watchsession_info['program']['beginTime']
-            endtime = watchsession_info['program']['endTime']
+            begin_time = watchsession_info['program']['beginTime']
+            end_time = watchsession_info['program']['endTime']
             print('-' * shutil.get_terminal_size().columns)
             print(f"番組タイトル: {watchsession_info['program']['title']} ({watchsession_info['program']['nicoliveProgramId']})")
-            print(f"番組開始時刻: {datetime.fromtimestamp(begintime).strftime('%Y/%m/%d %H:%M:%S')}  " +
-                  f"番組終了時刻: {datetime.fromtimestamp(endtime).strftime('%Y/%m/%d %H:%M:%S')}")
+            print(f"番組開始時刻: {datetime.fromtimestamp(begin_time).strftime('%Y/%m/%d %H:%M:%S')}  " +
+                  f"番組終了時刻: {datetime.fromtimestamp(end_time).strftime('%Y/%m/%d %H:%M:%S')}")
 
             # コメントセッションへの接続情報を取得
             commentsession_info = self.__getCommentSessionInfo(watchsession_info)
 
             # 取得を開始する時間
-            if endtime > datetime.now().astimezone().timestamp():
+            if end_time > datetime.now().astimezone().timestamp():
                 # 番組終了時刻が現在時刻よりも後（＝現在放送中）の場合は、when を現在時刻のタイムスタンプに設定
                 # when を現在時刻より後に設定するとバグるのか、数分～数時間前以前のログしか返ってこないため
                 when = datetime.now().astimezone().timestamp()
             else:
                 # 番組終了時刻・取得終了時刻のどちらか小さい方を選択
                 date_235959_timestamp = (self.date + timedelta(hours=23, minutes=59, seconds=59)).astimezone().timestamp()
-                when = min(endtime, date_235959_timestamp)
+                when = min(end_time, date_235959_timestamp)
 
             # Sec-WebSocket-Protocol が重要
             try:
@@ -123,7 +123,7 @@ class JKComment:
                 raise WebSocketError(f"コメントセッションへの接続に失敗しました。({ex4})")
 
             # コメント情報を入れるリスト
-            chat: list[dict[str, Any]] = []
+            chats: list[dict[str, Any]] = []
 
             while True:
 
@@ -148,7 +148,7 @@ class JKComment:
                 ]))
 
                 # コメント情報を入れるリスト（1000 コメントごとの小分け）
-                chat_child: list[dict[str, Any]] = []
+                child_chats: list[dict[str, Any]] = []
 
                 # 1000 コメント取得できるまでループ
                 last_res = -1
@@ -185,7 +185,7 @@ class JKComment:
                     if 'chat' in response:
 
                         # コメントを追加
-                        chat_child.append(response)
+                        child_chats.append(response)
 
                         # 最後のコメ番なら while ループを抜ける
                         if last_res == response['chat']['no']:
@@ -193,56 +193,56 @@ class JKComment:
 
                 # last_res が -1 → 最後のコメ番自体が存在しない → コメントが一度も存在しないスレッド
                 # chat_child が空の場合も同様に判断する
-                if last_res == -1 or len(chat_child) == 0:
+                if last_res == -1 or len(child_chats) == 0:
                     # 処理を中断して抜ける
-                    print(f"{self.date.strftime('%Y/%m/%d')} 中の合計 {len(chat)} 件のコメントを取得しました。")
+                    print(f"{self.date.strftime('%Y/%m/%d')} 中の合計 {len(chats)} 件のコメントを取得しました。")
                     break
 
                 # when を取得した最後のコメントのタイムスタンプ + 1 で更新
                 # + 1 しないと取りこぼす可能性がある
-                when = int(chat_child[0]['chat']['date']) + float('0.' + str(chat_child[0]['chat']['date_usec'])) + 1
+                when = int(child_chats[0]['chat']['date']) + float('0.' + str(child_chats[0]['chat']['date_usec'])) + 1
 
                 # コメントの重複を削除
-                if len(chat) > 0:
+                if len(chats) > 0:
 
-                    last_comeban = chat_child[-1]['chat']['no']  # 今回取得の最後のコメ番
-                    first_comeban = chat[0]['chat']['no']  # 前回取得の最初のコメ番
+                    last_comeban = child_chats[-1]['chat']['no']  # 今回取得の最後のコメ番
+                    first_comeban = chats[0]['chat']['no']  # 前回取得の最初のコメ番
 
                     # 今回取得の最後のコメ番が前回取得の最初のコメ番よりも小さくなるまでループ
                     while (last_comeban >= first_comeban):
 
                         # 重複分を 1 つずつ削除
-                        if len(chat_child) > 0:
-                            chat_child.pop(-1)
+                        if len(child_chats) > 0:
+                            child_chats.pop(-1)
                         else:
                             break
 
                         # 最後のコメ番を更新
-                        if len(chat_child) > 0:
-                            last_comeban = chat_child[-1]['chat']['no']
+                        if len(child_chats) > 0:
+                            last_comeban = child_chats[-1]['chat']['no']
                         else:
                             break
 
                     # chat_child が空の場合
                     # 1000 個取得しようとしてるのにコメントが何も入っていないのはおかしいので、全て取得したものとみなす
-                    if len(chat_child) == 0:
+                    if len(child_chats) == 0:
                         break
 
                 # chat に chat_child の内容を取得
                 # 最後のコメントから遡るので、さっき取得したコメントは既に取得したコメントよりも前に連結する
-                chat = chat_child + chat
+                chats = child_chats + chats
 
                 # 標準出力を上書きする
                 # 参考: https://hacknote.jp/archives/51679/
-                print('\r' + f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chat))} 件のコメントを取得しました。", end='')
+                print('\r' + f"{self.date.strftime('%Y/%m/%d')} 中の合計 {str(len(chats))} 件のコメントを取得しました。", end='')
 
                 # コメ番が 1 ならすべてのコメントを取得したと判断して抜ける
-                if int(chat[0]['chat']['no']) == 1:
+                if int(chats[0]['chat']['no']) == 1:
                     print()  # 改行を出力
                     break
 
                 # 最初のコメントのタイムスタンプが取得開始より前なら抜ける（無駄に取得しないように）]
-                if int(chat[0]['chat']['date']) < self.date.timestamp():
+                if int(chats[0]['chat']['date']) < self.date.timestamp():
                     print()  # 改行を出力
                     break
 
@@ -252,7 +252,7 @@ class JKComment:
             print(f"コメントを {watchsession_info['program']['title']} から取得しました。")
 
             # 番組単体で取得したコメントを返す
-            return chat
+            return chats
 
         # 番組 ID らを取得
         # 指定された日付内に放送された全ての番組からコメントを取得するので複数入ることがある
@@ -261,39 +261,32 @@ class JKComment:
             raise LiveIDError('番組 ID を取得できませんでした。')
 
         # コメントを取得
-        chat: list[dict[str, Any]] = []
+        chats: list[dict[str, Any]] = []
         for live_id in live_ids:
-            chat = chat + getCommentOne(live_id)
+            chats = chats + getCommentOne(live_id)
 
         print('-' * shutil.get_terminal_size().columns)
-        print(f"合計コメント数: {str(len(chat))} 件")
-
-        # コメントのうち /emotion や /nicoad などの運営コメントを弾く
-        # if not re.match … の部分を if re.match … にすると運営コメントだけ取り出せる
-        # 全てのコメントを保存する方向にしたのでコメントアウト
-        # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
-        # print(f"/emotion や /nicoad などの運営コメントを除外しています…")
-        # chat = [chatitem for chatitem in chat if not re.match(r'/[a-z]+ ', chatitem['chat']['content'])]
+        print(f"合計コメント数: {str(len(chats))} 件")
 
         # コメントのうち指定された日付以外に投稿されているものを弾く
         # コメントの投稿時間の日付と、指定された日付が一致するコメントのみ残す
         # 参考: https://note.nkmk.me/python-list-clear-pop-remove-del/
         print(f"{self.date.strftime('%Y/%m/%d')} 以外に投稿されたコメントを除外しています…")
-        chat = [chatitem for chatitem in chat if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y/%m/%d') == self.date.strftime('%Y/%m/%d')]
+        chats = [chatitem for chatitem in chats if datetime.fromtimestamp(chatitem['chat']['date']).strftime('%Y/%m/%d') == self.date.strftime('%Y/%m/%d')]
 
-        print(f"最終コメント数: {str(len(chat))} 件")
+        print(f"最終コメント数: {str(len(chats))} 件")
 
         # xml の場合
         if format == 'xml':
 
             # xml オブジェクトに変換したコメントを返す
-            return self.__convertToXML(chat)
+            return self.__convertToXML(chats)
 
         # json の場合
         elif format == 'json':
 
             # 取得したコメントをそのまま返す
-            return chat
+            return chats
 
 
     @staticmethod
