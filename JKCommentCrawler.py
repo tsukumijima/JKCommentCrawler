@@ -16,7 +16,7 @@ from pathlib import Path
 import JKComment
 
 
-def main():
+def main() -> None:
 
     # 引数解析
     parser = argparse.ArgumentParser(description='ニコ生に移行した新ニコニコ実況の過去ログを取得し、Nekopanda 氏が公開されている旧ニコニコ実況の過去ログデータ一式と互換性のあるファイル・フォルダ構造で保存するツール', formatter_class=argparse.RawTextHelpFormatter)
@@ -45,7 +45,7 @@ def main():
     # 行区切り
     print('=' * shutil.get_terminal_size().columns)
 
-    def get(jikkyo_id, date):
+    def get(jikkyo_id: str, date: datetime.datetime) -> None:
 
         # インスタンスを作成
         jkcomment = JKComment.JKComment(jikkyo_id, date, nicologin_mail, nicologin_password)
@@ -59,7 +59,7 @@ def main():
 
             # コメントデータ（XML）を取得
             try:
-                comment_xmlobject = jkcomment.getComment(objformat='xml')
+                comment_xml_object = jkcomment.getComment(format='xml')
                 break  # ループを抜ける
             # 処理中断、次のチャンネルに進む
             except JKComment.LiveIDError:
@@ -103,14 +103,14 @@ def main():
         # XML をフォーマットする
         # lxml.etree を使うことで属性の順序を保持できる
         # 参考: https://banatech.net/blog/view/19
-        def format_xml(elem):
+        def format_xml(elem: ET.Element) -> str:
             # xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
             xml = ET.tostring(elem, encoding='UTF-8', pretty_print=True).decode('UTF-8').replace('>\n  ', '>\n')  # インデントを除去
             xml = xml.replace('<packet>\n', '').replace('</packet>', '').replace('<packet/>', '')
             return xml.rstrip()
 
         # XML にフォーマット
-        comment_xml = format_xml(comment_xmlobject)
+        comment_xml = format_xml(comment_xml_object)
 
         # ファイル名・フォルダ
         os.makedirs(f"{jkcomment_folder}/{jikkyo_id}/{date.strftime('%Y')}/", exist_ok=True)
