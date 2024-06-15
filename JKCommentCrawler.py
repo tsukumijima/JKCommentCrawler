@@ -143,19 +143,19 @@ def main() -> None:
         print('=' * shutil.get_terminal_size().columns)
 
     # ニコ生がメンテナンス中やサーバーエラーでないかを確認
-    nicolive_status, nicolive_status_code = JKComment.JKComment.getNicoLiveStatus()
-    if nicolive_status is False:
-        print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
-        print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}", file=sys.stderr)
-        if nicolive_status_code == 500:
-            print('エラー: 現在、ニコ生で障害が発生しています。(HTTP Error 500)', file=sys.stderr)
-        elif nicolive_status_code == 503:
-            print('エラー: 現在、ニコ生はメンテナンス中です。(HTTP Error 503)', file=sys.stderr)
-        else:
-            print(f"エラー: 現在、ニコ生でエラーが発生しています。(HTTP Error {nicolive_status_code})", file=sys.stderr)
-        print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
-        print('=' * shutil.get_terminal_size().columns)
-        sys.exit(1)
+    # nicolive_status, nicolive_status_code = JKComment.JKComment.getNicoLiveStatus()
+    # if nicolive_status is False:
+    #     print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+    #     print(f"エラー発生時刻: {datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}", file=sys.stderr)
+    #     if nicolive_status_code == 500:
+    #         print('エラー: 現在、ニコ生で障害が発生しています。(HTTP Error 500)', file=sys.stderr)
+    #     elif nicolive_status_code == 503:
+    #         print('エラー: 現在、ニコ生はメンテナンス中です。(HTTP Error 503)', file=sys.stderr)
+    #     else:
+    #         print(f"エラー: 現在、ニコ生でエラーが発生しています。(HTTP Error {nicolive_status_code})", file=sys.stderr)
+    #     print('/' * shutil.get_terminal_size().columns, file=sys.stderr)
+    #     print('=' * shutil.get_terminal_size().columns)
+    #     sys.exit(1)
 
     # コメントデータ（XML）を全てのチャンネル分取得
     if jikkyo_id.lower() == 'all':

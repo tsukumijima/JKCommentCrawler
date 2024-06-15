@@ -20,10 +20,10 @@ __version__ = '1.9.0'
 class JKComment:
 
     # User-Agent
-    user_agent = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 JKCommentCrawler/{__version__}'
+    USER_AGENT = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 JKCommentCrawler/{__version__}'
 
     # 実況 ID とチャンネル/コミュニティ ID の対照表
-    jikkyo_channel_table: dict[str, dict[str, str]] = {
+    JIKKYO_CHANNELS: dict[str, dict[str, str]] = {
         'jk1': {'type': 'channel', 'id': 'ch2646436', 'name': 'NHK総合'},
         'jk2': {'type': 'channel', 'id': 'ch2646437', 'name': 'NHK Eテレ'},
         'jk4': {'type': 'channel', 'id': 'ch2646438', 'name': '日本テレビ'},
@@ -107,8 +107,9 @@ class JKComment:
             # Sec-WebSocket-Protocol が重要
             try:
                 commentsession = websocket.create_connection(commentsession_info['messageServer']['uri'], timeout=15, header={
-                    'User-Agent': JKComment.user_agent,
-                    'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                    'User-Agent': JKComment.USER_AGENT,
+                    # 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                    'Sec-WebSocket-Extensions': 'client_max_window_bits',  # websocket-client は permessage-deflate をサポートしていない
                     'Sec-WebSocket-Protocol': 'msg.nicovideo.jp#json',
                     'Sec-WebSocket-Version': '13',
                 })
@@ -137,7 +138,7 @@ class JKComment:
                         'thread': {
                             'thread': commentsession_info['threadId'],  # スレッド ID
                             'version': '20061206',
-                            'when': when + 1,  # 基準にする時間 (UNIXTime)  +1 するのは取りこぼしをなくすため
+                            'when': int(when + 1),  # 基準にする時間 (UNIXTime)  +1 するのは取りこぼしをなくすため
                             'res_from': -1000,  # 基準にする時間（通常は生放送の最後）から 1000 コメント遡る
                             'with_global': 1,
                             'scores': 1,
@@ -265,6 +266,10 @@ class JKComment:
         for live_id in live_ids:
             chats = chats + getCommentOne(live_id)
 
+        # コメントの投稿時間昇順で並び替え
+        # これにより、複数のコメントソースが混じっていても適切に時系列で保存されるようになる
+        chats = sorted(chats, key=lambda x: int(f'{x["chat"]["date"]}.{x["chat"]["date_usec"]}'))
+
         print('-' * shutil.get_terminal_size().columns)
         print(f"合計コメント数: {str(len(chats))} 件")
 
@@ -295,7 +300,7 @@ class JKComment:
         実況 ID リストを取得する
         """
 
-        return list(JKComment.jikkyo_channel_table.keys())
+        return list(JKComment.JIKKYO_CHANNELS.keys())
 
 
     @staticmethod
@@ -304,8 +309,8 @@ class JKComment:
         実況 ID から実況チャンネル名を取得する
         """
 
-        if jikkyo_id in JKComment.jikkyo_channel_table:
-            return JKComment.jikkyo_channel_table[jikkyo_id]['name']
+        if jikkyo_id in JKComment.JIKKYO_CHANNELS:
+            return JKComment.JIKKYO_CHANNELS[jikkyo_id]['name']
         else:
             return None
 
@@ -316,7 +321,7 @@ class JKComment:
         """
 
         nicolive_url = 'https://live.nicovideo.jp/'
-        response = requests.get(nicolive_url, headers={'User-Agent': JKComment.user_agent})
+        response = requests.get(nicolive_url, headers={'User-Agent': JKComment.USER_AGENT})
         # HTTP ステータスコードで判定
         if response.status_code == 200:
             return [True, response.status_code]
@@ -344,7 +349,7 @@ class JKComment:
             url = 'https://account.nicovideo.jp/api/v1/login'
             post = {'mail': self.nicologin_mail, 'password': self.nicologin_password}
             session = requests.session()
-            session.post(url, post, headers={'User-Agent': JKComment.user_agent})
+            session.post(url, post, headers={'User-Agent': JKComment.USER_AGENT})
 
             # Cookie を保存
             with open(cookie_dump, 'wb') as f:
@@ -362,12 +367,45 @@ class JKComment:
         if user_session is None:
             raise LoginError('ログインに失敗しました。')
 
+        # live_id に nx-jikkyo: の prefix がついている場合は、ニコ生の embedded-data のモックを返す
+        if live_id.startswith('nx-jikkyo:'):
+            nx_jikkyo_thread_id = live_id.replace('nx-jikkyo:', '')
+
+            # NX-Jikkyo API からスレッドの詳細情報を取得
+            ## 本当はここのレスポンスですでにコメント情報が返ってきているのだが、ロジックを極力いじりたくないので
+            ## あえて別途 WebSocket からコメントを取得するコードとしている
+            response = requests.get(
+                f'http://nx-jikkyo.tsukumijima.net/api/v1/threads/{nx_jikkyo_thread_id}',
+                headers={'User-Agent': JKComment.USER_AGENT},
+            )
+            if response.status_code != 200:
+                raise ResponseError(f'nx-jikkyo.tsukumijima.net への API リクエストに失敗しました。(HTTP Error {response.status_code})')
+            thread_info = response.json()
+
+            # ニコ生の embedded-data の簡易的なモックを返す
+            return {
+                'user': {
+                    'isLoggedIn': True,
+                },
+                'program': {
+                    'title': thread_info['title'],
+                    'beginTime': datetime.fromisoformat(thread_info['start_at']).timestamp(),
+                    'endTime': datetime.fromisoformat(thread_info['end_at']).timestamp(),
+                    'nicoliveProgramId': live_id,
+                },
+                'site': {
+                    'relive': {
+                        'webSocketUrl': f'wss://nx-jikkyo.tsukumijima.net/api/v1/channels/{thread_info["channel_id"]}/ws/watch?thread_id={nx_jikkyo_thread_id}',
+                    },
+                },
+            }
+
         def get(user_session: str) -> dict[str, Any]:
 
             # 番組 ID から HTML を取得
             url = 'https://live2.nicovideo.jp/watch/' + live_id
             cookie = {'user_session': user_session}
-            response = requests.get(url, cookies=cookie, headers={'User-Agent': JKComment.user_agent})
+            response = requests.get(url, cookies=cookie, headers={'User-Agent': JKComment.USER_AGENT})
 
             if response.status_code != 200:
                 raise ResponseError(f'視聴ページの取得に失敗しました。(HTTP Error {response.status_code})')
@@ -423,7 +461,8 @@ class JKComment:
         try:
             watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], timeout=15, header={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-                'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                # 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
+                'Sec-WebSocket-Extensions': 'client_max_window_bits',  # websocket-client は permessage-deflate をサポートしていない
                 'Sec-WebSocket-Version': '13',
             })
         except ConnectionResetError as ex1:
@@ -474,15 +513,15 @@ class JKComment:
         スクリーンネームの実況 ID から、実際のニコニコチャンネル/コミュニティの ID と種別を取得する
         """
 
-        if jikkyo_id in JKComment.jikkyo_channel_table:
-            return JKComment.jikkyo_channel_table[jikkyo_id]
+        if jikkyo_id in JKComment.JIKKYO_CHANNELS:
+            return JKComment.JIKKYO_CHANNELS[jikkyo_id]
         else:
             return None
 
 
     def __getNicoLiveID(self, jikkyo_id: str, date: datetime) -> Optional[list[str]]:
         """
-        ニコニコチャンネル/コミュニティの ID から、指定された日付に放送されたニコ生の番組 ID を取得する
+        スクリーンネームの実況 ID と指定された日付から、指定された日付に放送されたニコ生・NX-Jikkyo の番組 ID を取得する
         """
 
         # 実際のニコニコチャンネル/コミュニティの ID と種別を取得
@@ -493,55 +532,107 @@ class JKComment:
         live_program_infos: list[dict[str, Any]] = []
         live_ids: list[str] = []
 
-        # ニコニコチャンネルのみ
-        if jikkyo_data['type'] == 'channel':
+        # ニコ生がメンテナンス中やサーバーエラーでない場合のみ実行
+        nicolive_status, nicolive_status_code = self.getNicoLiveStatus()
+        if nicolive_status is True:
 
-            # 放送中番組の ID を取得
-            ## 実際にリクエストされる URL: https://live2.nicovideo.jp/watch/ch2646436 (番組 ID の代わりにチャンネル ID を指定)
-            watchsession_info = self.__getWatchSessionInfo(jikkyo_data['id'])
-            live_ids.append(watchsession_info['program']['nicoliveProgramId'])
+            # ニコニコチャンネルのみ
+            if jikkyo_data['type'] == 'channel':
 
-            # 過去番組の ID をスクレイピングで取得
-            for page in range(1, 3):  # 1 ページ目と 2 ページ目を取得
-                api_url = f'https://sp.ch.nicovideo.jp/api/past_lives/?page={page}&channel_id={jikkyo_data["id"]}'
-                api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
+                # 放送中番組の ID を取得
+                ## 実際にリクエストされる URL: https://live2.nicovideo.jp/watch/ch2646436 (番組 ID の代わりにチャンネル ID を指定)
+                watchsession_info = self.__getWatchSessionInfo(jikkyo_data['id'])
+                live_ids.append(watchsession_info['program']['nicoliveProgramId'])
+
+                # 過去番組の ID をスクレイピングで取得
+                for page in range(1, 3):  # 1 ページ目と 2 ページ目を取得
+                    api_url = f'https://sp.ch.nicovideo.jp/api/past_lives/?page={page}&channel_id={jikkyo_data["id"]}'
+                    api_response = requests.get(api_url, headers={'User-Agent': JKComment.USER_AGENT})
+                    if api_response.status_code != 200:
+                        if page == 1:
+                            raise Exception(f'sp.ch.nicovideo.jp へのリクエストに失敗しました。(HTTP Error {api_response.status_code})')
+                        else:
+                            break  # 2 ページ目が取得できなかった場合はループを抜ける
+                    soup = BeautifulSoup(api_response.content, 'html.parser')
+                    for a_tag in soup.find_all('a', href=True):
+                        href = a_tag['href']
+                        if 'https://live.nicovideo.jp/watch/' in href:
+                            live_ids.append(href.split('/')[-1])
+
+            # ニコニコミュニティのみ
+            elif jikkyo_data['type'] == 'community':
+
+                # API にアクセス
+                api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
+                api_response = requests.get(api_url, headers={'User-Agent': JKComment.USER_AGENT})
                 if api_response.status_code != 200:
-                    if page == 1:
-                        raise Exception(f'sp.ch.nicovideo.jp へのリクエストに失敗しました。(HTTP Error {api_response.status_code})')
-                    else:
-                        break  # 2 ページ目が取得できなかった場合はループを抜ける
-                soup = BeautifulSoup(api_response.content, 'html.parser')
-                for a_tag in soup.find_all('a', href=True):
-                    href = a_tag['href']
-                    if 'https://live.nicovideo.jp/watch/' in href:
-                        live_ids.append(href.split('/')[-1])
+                    raise ResponseError(f'com.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
-        # ニコニコミュニティのみ
-        elif jikkyo_data['type'] == 'community':
+                api_response_json = json.loads(api_response.content)  # ch とか co を削ぎ落としてから
+                if 'data' not in api_response_json:
+                    raise ResponseError('com.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
 
-            # API にアクセス
-            api_url = f"https://com.nicovideo.jp/api/v1/communities/{jikkyo_data['id'][2:]}/lives.json"
-            api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
-            if api_response.status_code != 200:
-                raise ResponseError(f'com.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
+                # 放送 ID を抽出
+                for live in api_response_json['data']['lives']:
+                    # ON_AIR 状態またはタイムシフトが取得可能であれば追加
+                    # タイムシフトが取得不可のものも含めてしまうと無駄な API アクセスが発生するため
+                    # live['timeshift']['enabled'] が False の場合、live['timeshift']['can_view'] は要素ごと存在しない
+                    if (live['status'] == 'ON_AIR' or (live['timeshift']['enabled'] is True and live['timeshift']['can_view'] is True)):
+                        live_ids.append(live['id'])
 
-            api_response_json = json.loads(api_response.content)  # ch とか co を削ぎ落としてから
-            if 'data' not in api_response_json:
-                raise ResponseError('com.nicovideo.jp への API リクエストに失敗しました。メンテナンス中かもしれません。')
+        else:
+            print('-' * shutil.get_terminal_size().columns)  # 行区切り
+            if nicolive_status_code == 500:
+                print('注意: 現在、ニコ生で障害が発生しています。(HTTP Error 500)')
+            elif nicolive_status_code == 503:
+                print('注意: 現在、ニコ生はメンテナンス中です。(HTTP Error 503)')
+            else:
+                print(f"注意: 現在、ニコ生でエラーが発生しています。(HTTP Error {nicolive_status_code})")
+            print('ニコ生からの過去ログ取得をスキップし、NX-Jikkyo からの過去ログ取得のみを行います。')
 
-            # 放送 ID を抽出
-            for live in api_response_json['data']['lives']:
-                # ON_AIR 状態またはタイムシフトが取得可能であれば追加
-                # タイムシフトが取得不可のものも含めてしまうと無駄な API アクセスが発生するため
-                # live['timeshift']['enabled'] が False の場合、live['timeshift']['can_view'] は要素ごと存在しない
-                if (live['status'] == 'ON_AIR' or (live['timeshift']['enabled'] is True and live['timeshift']['can_view'] is True)):
-                    live_ids.append(live['id'])
+        # ニコニコチャンネル/ニコニコミュニティかに関わらず、NX-Jikkyo でのスレッド ID を放送 ID として追加する
+        api_url = 'http://nx-jikkyo.tsukumijima.net/api/v1/channels'
+        api_response = requests.get(api_url, headers={'User-Agent': JKComment.USER_AGENT})
+        if api_response.status_code != 200:
+            raise ResponseError(f'nx-jikkyo.tsukumijima.net への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
+        api_response_json = json.loads(api_response.content)
+        for channel in api_response_json:
+            # 実況 ID とチャンネル ID が一致する場合、当該チャンネルの全スレッドの ID を live_ids (取得候補の放送 ID リスト) に追加
+            if channel['id'] == jikkyo_id:
+                for thread in channel['threads']:
+                    live_ids.append(f'nx-jikkyo:{thread["id"]}')
 
         for live_id in live_ids:
 
+            # live_id に nx-jikkyo: の prefix がついている場合は、NX-Jikkyo API からスレッドの詳細情報を取得
+            if live_id.startswith('nx-jikkyo:'):
+                nx_jikkyo_thread_id = live_id.replace('nx-jikkyo:', '')
+
+                # NX-Jikkyo API からスレッドの詳細情報を取得
+                ## 本当はここのレスポンスですでにコメント情報が返ってきているのだが、ロジックを極力いじりたくないので
+                ## あえて別途 WebSocket からコメントを取得するコードとしている
+                response = requests.get(
+                    f'http://nx-jikkyo.tsukumijima.net/api/v1/threads/{nx_jikkyo_thread_id}',
+                    headers={'User-Agent': JKComment.USER_AGENT},
+                )
+                if response.status_code != 200:
+                    raise ResponseError(f'nx-jikkyo.tsukumijima.net への API リクエストに失敗しました。(HTTP Error {response.status_code})')
+                thread_info = response.json()
+
+                # api.cas.nicovideo.jp のレスポンスを簡易的にモックする
+                live_program_infos.append({
+                    'id': thread_info['id'],
+                    'showTime': {
+                        'beginAt': thread_info['start_at'],
+                        'endAt': thread_info['end_at'],
+                    },
+                    'isNxJikkyo': True,
+                })
+                continue
+
             # API にアクセス
             api_url = f"https://api.cas.nicovideo.jp/v1/services/live/programs/{live_id}"
-            api_response = requests.get(api_url, headers={'User-Agent': JKComment.user_agent})
+            api_response = requests.get(api_url, headers={'User-Agent': JKComment.USER_AGENT})
             if api_response.status_code != 200:
                 raise ResponseError(f'api.cas.nicovideo.jp への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
 
@@ -573,7 +664,10 @@ class JKComment:
                 if beginAt < datetime.now().astimezone():
 
                     # 番組 ID を返す
-                    result.append('lv' + str(live_program_info['id']))
+                    if live_program_info.get('isNxJikkyo'):
+                        result.append('nx-jikkyo:' + str(live_program_info['id']))
+                    else:
+                        result.append('lv' + str(live_program_info['id']))
 
         # 取得終了時刻が現在時刻より後（未来）の場合、当然ながら全部取得できないので注意を出す
         # 取得終了が 2020-12-20 23:59:59 で 現在時刻が 2020-12-20 15:00:00 みたいな場合
