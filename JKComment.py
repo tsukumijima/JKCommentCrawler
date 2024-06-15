@@ -271,7 +271,7 @@ class JKComment:
 
         # コメントの投稿時間昇順で並び替え
         # これにより、複数のコメントソースが混じっていても適切に時系列で保存されるようになる
-        chats = sorted(chats, key=lambda x: int(f'{x["chat"]["date"]}.{x["chat"]["date_usec"]}'))
+        chats = sorted(chats, key=lambda x: float(f'{x["chat"]["date"]}.{x["chat"]["date_usec"]}'))
 
         print('-' * shutil.get_terminal_size().columns)
         print(f"合計コメント数: {str(len(chats))} 件")
