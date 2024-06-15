@@ -256,7 +256,7 @@ class JKComment:
             # NX-Jikkyo からコメントを取得した場合のみ、chat に識別用のフラグを追加
             if live_id.startswith('nx-jikkyo:'):
                 for chat in chats:
-                    chat['nx_jikkyo'] = '1'
+                    chat['chat']['nx_jikkyo'] = '1'
 
             print(f"コメントを {watchsession_info['program']['title']} から取得しました。")
 
