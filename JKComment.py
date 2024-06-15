@@ -22,6 +22,9 @@ class JKComment:
     # User-Agent
     USER_AGENT = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 JKCommentCrawler/{__version__}'
 
+    # NX-Jikkyo のベース URL
+    NX_JIKKYO_BASE_URL = 'https://nx-jikkyo.tsukumijima.net'
+
     # 実況 ID とチャンネル/コミュニティ ID の対照表
     JIKKYO_CHANNELS: dict[str, dict[str, str]] = {
         'jk1': {'type': 'channel', 'id': 'ch2646436', 'name': 'NHK総合'},
@@ -375,7 +378,7 @@ class JKComment:
             ## 本当はここのレスポンスですでにコメント情報が返ってきているのだが、ロジックを極力いじりたくないので
             ## あえて別途 WebSocket からコメントを取得するコードとしている
             response = requests.get(
-                f'http://nx-jikkyo.tsukumijima.net/api/v1/threads/{nx_jikkyo_thread_id}',
+                f'{self.NX_JIKKYO_BASE_URL}/api/v1/threads/{nx_jikkyo_thread_id}',
                 headers={'User-Agent': JKComment.USER_AGENT},
             )
             if response.status_code != 200:
@@ -395,7 +398,7 @@ class JKComment:
                 },
                 'site': {
                     'relive': {
-                        'webSocketUrl': f'wss://nx-jikkyo.tsukumijima.net/api/v1/channels/{thread_info["channel_id"]}/ws/watch?thread_id={nx_jikkyo_thread_id}',
+                        'webSocketUrl': f'{self.NX_JIKKYO_BASE_URL.replace("http", "ws")}/api/v1/channels/{thread_info["channel_id"]}/ws/watch?thread_id={nx_jikkyo_thread_id}',
                     },
                 },
             }
@@ -591,7 +594,7 @@ class JKComment:
             print('ニコ生からの過去ログ取得をスキップし、NX-Jikkyo からの過去ログ取得のみを行います。')
 
         # ニコニコチャンネル/ニコニコミュニティかに関わらず、NX-Jikkyo でのスレッド ID を放送 ID として追加する
-        api_url = 'http://nx-jikkyo.tsukumijima.net/api/v1/channels'
+        api_url = f'{self.NX_JIKKYO_BASE_URL}/api/v1/channels'
         api_response = requests.get(api_url, headers={'User-Agent': JKComment.USER_AGENT})
         if api_response.status_code != 200:
             raise ResponseError(f'nx-jikkyo.tsukumijima.net への API リクエストに失敗しました。(HTTP Error {api_response.status_code})')
@@ -612,7 +615,7 @@ class JKComment:
                 ## 本当はここのレスポンスですでにコメント情報が返ってきているのだが、ロジックを極力いじりたくないので
                 ## あえて別途 WebSocket からコメントを取得するコードとしている
                 response = requests.get(
-                    f'http://nx-jikkyo.tsukumijima.net/api/v1/threads/{nx_jikkyo_thread_id}',
+                    f'{self.NX_JIKKYO_BASE_URL}/api/v1/threads/{nx_jikkyo_thread_id}',
                     headers={'User-Agent': JKComment.USER_AGENT},
                 )
                 if response.status_code != 200:
