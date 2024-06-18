@@ -468,7 +468,7 @@ class JKComment:
         # User-Agent は標準のだと弾かれる
         try:
             watchsession = websocket.create_connection(watchsession_info['site']['relive']['webSocketUrl'], timeout=15, header={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+                'User-Agent': JKComment.USER_AGENT,
                 # 'Sec-WebSocket-Extensions': 'permessage-deflate; client_max_window_bits',
                 'Sec-WebSocket-Extensions': 'client_max_window_bits',  # websocket-client は permessage-deflate をサポートしていない
                 'Sec-WebSocket-Version': '13',
