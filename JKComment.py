@@ -328,6 +328,9 @@ class JKComment:
         ニコ生がメンテナンス中やサーバーエラーでないかを確認する
         """
 
+        # ニコ生が完全復旧するまで当面常に False を返す
+        return [False, 503]
+
         nicolive_url = 'https://live.nicovideo.jp/'
         response = requests.get(nicolive_url, headers={'User-Agent': JKComment.USER_AGENT})
         # HTTP ステータスコードで判定
@@ -341,6 +344,11 @@ class JKComment:
         """
         ニコニコにログインする
         """
+
+        # ニコニコがメンテナンス中の時はログインを実行しない
+        ## 成功扱いにするために空文字列を返す
+        if self.getNicoLiveStatus()[0] is False:
+            return ''
 
         cookie_dump = os.path.dirname(os.path.abspath(sys.argv[0])) + '/cookie.dump'
 
