@@ -254,9 +254,18 @@ class JKComment:
             # コメントセッションを閉じる
             commentsession.close()
 
-            # NX-Jikkyo からコメントを取得した場合のみ、chat に識別用のフラグを追加
-            if live_id.startswith('nx-jikkyo:'):
-                for chat in chats:
+            # NX-Jikkyo のコメントにのみ、chat に識別用のフラグを追加
+            for chat in chats:
+                # ユーザー ID が nicolive: から始まる場合はニコニコ実況本家のコメントなので、prefix を削除
+                if chat['chat']['user_id'].startswith('nicolive:'):
+                    chat['chat']['user_id'] = chat['chat']['user_id'].replace('nicolive:', '')
+                # ユーザー ID が rekari: から始まる場合は、かつて存在していたニコニコ実況 (Re:仮) のコメント
+                ## 過去に収集したデータとの互換性/一貫性のため、ユーザー ID から prefix は削除せず、nx_jikkyo フラグを付与する
+                ## 本来は nx_jikkyo フラグを付与すべきではないが、過渡期のためつけ忘れる処理を忘れていた… そのうちなんとかする予定
+                elif chat['chat']['user_id'].startswith('rekari:'):
+                    chat['chat']['nx_jikkyo'] = '1'
+                # それ以外のユーザー ID の場合は、NX-Jikkyo のコメントと判断し nx_jikkyo フラグを追加
+                else:
                     chat['chat']['nx_jikkyo'] = '1'
 
             print(f"コメントを {watchsession_info['program']['title']} から取得しました。")
@@ -329,7 +338,7 @@ class JKComment:
         ニコ生がメンテナンス中やサーバーエラーでないかを確認する
         """
 
-        # ニコ生が完全復旧するまで当面常に False を返す
+        # NDGR 新コメントサーバーには対応できていないため当面常に False を返し、NX-Jikkyo からコメントを受信する
         return [False, 503]
 
         nicolive_url = 'https://live.nicovideo.jp/'
