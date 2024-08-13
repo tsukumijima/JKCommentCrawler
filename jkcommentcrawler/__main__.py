@@ -38,7 +38,7 @@ async def main(
     if not config_ini.exists():
         raise Exception('JKCommentCrawler.ini not found. Copy from JKCommentCrawler.example.ini and edit it as needed.')
     config = configparser.ConfigParser()
-    config.read(config_ini, encoding='UTF-8')
+    config.read(config_ini, encoding='utf-8')
     kakolog_dir: Path = Path(config.get('Default', 'jkcomment_folder').rstrip('/') + 'test').resolve()
     niconico_mail: str = config.get('Default', 'nicologin_mail')
     niconico_password: str = config.get('Default', 'nicologin_password')
@@ -111,9 +111,29 @@ async def main(
             output_dir = kakolog_dir / jikkyo_channel_id / str(target_date.year)
             output_dir.mkdir(parents=True, exist_ok=True)
             output_file = output_dir / f'{target_date.strftime("%Y%m%d")}.nicojk'
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(NDGRClient.convertToXMLString(comments))
-            print(f'Saved to {output_file}.')
+            # コメントリストを XML 文字列に変換
+            xml_content = NDGRClient.convertToXMLString(comments)
+            # 既存の XML ファイルがあれば文字数を取得
+            if output_file.exists():
+                with open(output_file, 'r', encoding='utf-8') as f:
+                    existing_length = len(f.read())
+            else:
+                existing_length = 0
+            # コメントデータを保存
+            if len(xml_content) == 0:
+                # コメントが1件も取得できていない場合は保存しない
+                print(f"Skipping log save for {target_date.strftime('%Y/%m/%d')} as there are 0 comments.")
+            elif existing_length > len(xml_content) and not force:
+                # 既存のファイルの方が文字数が多い場合は保存しない
+                print(f'Skipping log save as the previously retrieved log has more characters. (Previous: {existing_length} chars, Current: {len(xml_content)} chars)')
+            else:
+                # 既存のファイルの方が文字数が多いが、--force が指定されている場合は上書きする
+                if existing_length > len(xml_content) and force:
+                    print(f'The previously retrieved log has more characters, but overwriting as --force is specified. (Previous: {existing_length} chars, Current: {len(xml_content)} chars)')
+                # ファイルに書き込む
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(xml_content)
+                print(f"Log saved to {output_file}.")
         elif len(comments) == 0:
             print(f'No comments found for {jikkyo_channel_id} on {target_date.strftime("%Y/%m/%d")}. Skipping...')
         print(Rule(characters='=', style=Style(color='#E33157')))
@@ -140,7 +160,7 @@ async def main(
         dataset_structure = get_directory_contents(kakolog_dir)
         with open(f'{kakolog_dir}/dataset_structure.json', 'w', encoding='utf-8') as f:
             json.dump(dataset_structure, f, ensure_ascii=False, indent=4)
-        print(f'The dataset structure was saved to {kakolog_dir}/dataset_structure.json.')
+        print(f'Dataset structure saved to {kakolog_dir}/dataset_structure.json.')
         print(Rule(characters='=', style=Style(color='#E33157')))
 
 
