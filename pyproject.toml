@@ -4,12 +4,10 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-beautifulsoup4 = "^4.12.3"
-lxml = "^5.2.2"
-lxml-stubs = "^0.5.1"
 requests = "^2.32.3"
 python-dateutil = "^2.9.0.post0"
 websocket-client = "^1.8.0"
+ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "80c3384a462927750d111ec2eea06b65a4f203a1" }
 
 [tool.poetry.group.dev.dependencies]
 

@@ -147,6 +147,7 @@ dmypy.json
 # JKCommentCrawler
 JKCommentCrawler.ini
 cookie.dump
+cookies.json
 log*
 kakolog*
 !.gitkeep
