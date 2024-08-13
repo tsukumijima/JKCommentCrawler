@@ -3,7 +3,7 @@ import configparser
 import json
 import typer
 from datetime import datetime
-from ndgr_client import NDGRClient, NDGRComment
+from ndgr_client import NDGRClient, XMLCompatibleComment
 from ndgr_client.utils import AsyncTyper
 from pathlib import Path
 from rich import print
@@ -29,7 +29,7 @@ async def main(
     version: bool = typer.Option(None, '--version', callback=version, is_eager=True, help='バージョン情報を表示する。'),
 ):
     print(Rule(characters='=', style=Style(color='#E33157')))
-    target_date = datetime.strptime(date, '%Y/%m/%d')
+    target_date = datetime.strptime(date, '%Y/%m/%d').date()
 
     # 設定読み込み
     config_ini = Path(__file__).parent.parent / 'JKCommentCrawler.ini'
@@ -55,10 +55,12 @@ async def main(
         print(Rule(characters='-', style=Style(color='#E33157')))
 
         # ダウンロードしたコメントを格納するリスト
-        comments: list[NDGRComment] = []
+        comments: list[XMLCompatibleComment] = []
 
         # 指定された日付に一部でも放送された実況番組のコメントをすべてダウンロード
-        for nicolive_program_id in await NDGRClient.getProgramIDsOnDate(jikkyo_channel_id, target_date):
+        nicolive_program_ids = await NDGRClient.getProgramIDsOnDate(jikkyo_channel_id, target_date)
+        print(f'Retrieving Nicolive comments from {len(nicolive_program_ids)} programs. ({", ".join(nicolive_program_ids)})')
+        for nicolive_program_id in nicolive_program_ids:
 
             # NDGRClient を初期化
             ndgr_client = NDGRClient(nicolive_program_id, verbose=False, console_output=True)
@@ -69,18 +71,27 @@ async def main(
             if cookie_json.exists():
                 with open(cookie_json, 'r', encoding='utf-8') as f:
                     cookies_dict = json.load(f)
-                await ndgr_client.login(cookies=cookies_dict)
+                cookies_dict = await ndgr_client.login(cookies=cookies_dict)
+                # もし None が返る場合はセッション切れの可能性があるので、再ログイン
+                if cookies_dict is None:
+                    cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
+                    if cookies_dict is None:
+                        raise Exception('Failed to login to niconico.')
+                    with open(cookie_json, 'w', encoding='utf-8') as f:
+                        json.dump(cookies_dict, f)
             else:
                 cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
+                if cookies_dict is None:
+                    raise Exception('Failed to login to niconico.')
                 with open(cookie_json, 'w', encoding='utf-8') as f:
                     json.dump(cookies_dict, f)
 
             # コメントをダウンロードしてリストに追加
-            comments.extend(await ndgr_client.downloadBackwardComments())
+            comments.extend([NDGRClient.convertToXMLCompatibleComment(comment) for comment in await ndgr_client.downloadBackwardComments()])
 
         # 指定された日付以外に投稿されたコメントを除外
         print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
-        comments = [comment for comment in comments if comment.at.date() == target_date]
+        comments = [comment for comment in comments if datetime.fromtimestamp(comment.date_with_usec) == target_date]
         print(f'Excluding comments posted after {target_date.strftime("%Y/%m/%d")}...')
         print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
         comment_counts[jikkyo_channel_id] = len(comments)
