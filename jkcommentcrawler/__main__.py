@@ -93,9 +93,9 @@ async def main(
 
         # 指定された日付以外に投稿されたコメントを除外
         print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
-        comments = [comment for comment in comments if datetime.fromtimestamp(comment.date_with_usec) == target_date]
-        print(f'Excluding comments posted after {target_date.strftime("%Y/%m/%d")}...')
-        print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
+        comments = [comment for comment in comments if datetime.fromtimestamp(comment.date_with_usec).date() == target_date]
+        print(f'Excluding comments posted on dates other than {target_date.strftime("%Y/%m/%d")}...')
+        print(f'Final comments for {jikkyo_channel_id}: {len(comments)}')
         comment_counts[jikkyo_channel_id] = len(comments)
 
         # {kakolog_dir}/{jikkyo_channel_id}/{date.year}/{date.strftime('%Y%m%d')}.nicojk に保存
