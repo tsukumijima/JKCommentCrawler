@@ -30,11 +30,13 @@ async def main(
 ):
     print(Rule(characters='=', style=Style(color='#E33157')))
     target_date = datetime.strptime(date, '%Y/%m/%d').date()
+    if target_date > datetime.now().date():
+        raise Exception('Target date is in the future.')
 
     # 設定読み込み
     config_ini = Path(__file__).parent.parent / 'JKCommentCrawler.ini'
     if not config_ini.exists():
-        raise Exception('JKCommentCrawler.ini が存在しません。JKCommentCrawler.example.ini からコピーし、\n適宜設定を変更して JKCommentCrawler と同じ場所に配置してください。')
+        raise Exception('JKCommentCrawler.ini not found. Copy from JKCommentCrawler.example.ini and edit it as needed.')
     config = configparser.ConfigParser()
     config.read(config_ini, encoding='UTF-8')
     kakolog_dir: Path = Path(config.get('Default', 'jkcomment_folder').rstrip('/') + 'test').resolve()
@@ -68,13 +70,13 @@ async def main(
             ndgr_client = NDGRClient(nicolive_program_id, verbose=False, console_output=True)
 
             # ニコニコアカウントにログイン (タイムシフト再生に必要)
-            ## すでにログイン済みの Cookie が cookies.json にあれば再利用し、ない場合は新規ログインを行う
+            ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
             cookies_json = Path(__file__).parent.parent / 'cookies.json'
             if cookies_json.exists():
                 with open(cookies_json, 'r', encoding='utf-8') as f:
                     cookies_dict = json.load(f)
                 cookies_dict = await ndgr_client.login(cookies=cookies_dict)
-                # もし None が返る場合はセッション切れの可能性があるので、再ログイン
+                # もし None が返る場合はログインセッションが切れた可能性が高いので、メールアドレスとパスワードを指定して再ログインを実行
                 if cookies_dict is None:
                     cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                     if cookies_dict is None:
@@ -82,6 +84,7 @@ async def main(
                     with open(cookies_json, 'w', encoding='utf-8') as f:
                         json.dump(cookies_dict, f)
             else:
+                # cookies.json が存在しない場合は新規ログインを実行
                 cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                 if cookies_dict is None:
                     raise Exception('Failed to login to niconico.')
@@ -94,7 +97,7 @@ async def main(
         # 指定された日付以外に投稿されたコメントを除外
         print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
         comments = [comment for comment in comments if datetime.fromtimestamp(comment.date_with_usec).date() == target_date]
-        print(f'Excluding comments posted on dates other than {target_date.strftime("%Y/%m/%d")}...')
+        print(f'Excluding comments posted on dates other than {target_date.strftime("%Y/%m/%d")} ...')
         print(f'Final comments for {jikkyo_channel_id}: {len(comments)}')
         comment_counts[jikkyo_channel_id] = len(comments)
 
@@ -111,6 +114,8 @@ async def main(
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(NDGRClient.convertToXMLString(comments))
             print(f'Saved to {output_file}.')
+        elif len(comments) == 0:
+            print(f'No comments found for {jikkyo_channel_id} on {target_date.strftime("%Y/%m/%d")}. Skipping...')
         print(Rule(characters='=', style=Style(color='#E33157')))
 
     if channel_id == 'all':
