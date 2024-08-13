@@ -69,9 +69,9 @@ async def main(
 
             # ニコニコアカウントにログイン (タイムシフト再生に必要)
             ## すでにログイン済みの Cookie が cookies.json にあれば再利用し、ない場合は新規ログインを行う
-            cookie_json = kakolog_dir / 'cookie.json'
-            if cookie_json.exists():
-                with open(cookie_json, 'r', encoding='utf-8') as f:
+            cookies_json = Path(__file__).parent.parent / 'cookies.json'
+            if cookies_json.exists():
+                with open(cookies_json, 'r', encoding='utf-8') as f:
                     cookies_dict = json.load(f)
                 cookies_dict = await ndgr_client.login(cookies=cookies_dict)
                 # もし None が返る場合はセッション切れの可能性があるので、再ログイン
@@ -79,13 +79,13 @@ async def main(
                     cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                     if cookies_dict is None:
                         raise Exception('Failed to login to niconico.')
-                    with open(cookie_json, 'w', encoding='utf-8') as f:
+                    with open(cookies_json, 'w', encoding='utf-8') as f:
                         json.dump(cookies_dict, f)
             else:
                 cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                 if cookies_dict is None:
                     raise Exception('Failed to login to niconico.')
-                with open(cookie_json, 'w', encoding='utf-8') as f:
+                with open(cookies_json, 'w', encoding='utf-8') as f:
                     json.dump(cookies_dict, f)
 
             # コメントをダウンロードしてリストに追加
@@ -99,18 +99,39 @@ async def main(
         comment_counts[jikkyo_channel_id] = len(comments)
 
         # {kakolog_dir}/{jikkyo_channel_id}/{date.year}/{date.strftime('%Y%m%d')}.nicojk に保存
-        output_dir = kakolog_dir / jikkyo_channel_id / str(target_date.year)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f'{target_date.strftime("%Y%m%d")}.nicojk'
-        with open(output_file, mode='w', encoding='utf-8') as f:
-            f.write(NDGRClient.convertToXMLString(comments))
-        print(f'Saved to {output_file}.')
+        ## 取得できたコメントが一つもない場合は実行しない
+        if len(comments) > 0:
+            output_dir = kakolog_dir / jikkyo_channel_id / str(target_date.year)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f'{target_date.strftime("%Y%m%d")}.nicojk'
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(NDGRClient.convertToXMLString(comments))
+            print(f'Saved to {output_file}.')
         print(Rule(characters='=', style=Style(color='#E33157')))
 
     if channel_id == 'all':
         print('Download completed for all channels.')
         for jikkyo_channel_id, count in comment_counts.items():
             print(f'{jikkyo_channel_id:>5}: {count:>5} comments')
+        print(Rule(characters='=', style=Style(color='#E33157')))
+
+    # --save-dataset-structure-json が指定されている場合
+    if save_dataset_structure_json is True:
+        def get_directory_contents(directory_path: Path, nest: bool = False) -> dict[str, dict[str, dict[str, None]]]:
+            if not directory_path.exists():
+                raise FileNotFoundError(f'Directory "{directory_path}" does not exist.')
+            data = {}
+            for item in sorted(directory_path.iterdir()):
+                if item.is_dir() and (item.name.startswith('jk') or nest is True):
+                    data[item.name] = get_directory_contents(item, nest=True)
+                elif item.is_file() and nest is True:
+                    data[item.name] = None
+            return data
+
+        dataset_structure = get_directory_contents(kakolog_dir)
+        with open(f'{kakolog_dir}/dataset_structure.json', 'w', encoding='utf-8') as f:
+            json.dump(dataset_structure, f, ensure_ascii=False, indent=4)
+        print(f'The dataset structure was saved to {kakolog_dir}/dataset_structure.json.')
         print(Rule(characters='=', style=Style(color='#E33157')))
 
 
