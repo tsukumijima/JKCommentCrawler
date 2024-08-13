@@ -1,4 +1,5 @@
 
+import asyncio
 import configparser
 import json
 import traceback
@@ -163,8 +164,9 @@ async def main(
                 if retry_count < 3:
                     # エラー発生時は3回までリトライ
                     print(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
-                          f'Unexpected error occurred. Retrying ({retry_count + 1}/3) ...')
+                          f'Unexpected error occurred. Retrying ({retry_count + 1}/3) after 3 seconds ...')
                     print(traceback.format_exc())
+                    await asyncio.sleep(3)
                 else:
                     # リトライ失敗、このチャンネルはスキップして次の実況チャンネルへ
                     print(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
