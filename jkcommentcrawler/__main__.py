@@ -51,15 +51,17 @@ async def main(
     await NDGRClient.updateJikkyoChannelIDMap()
     comment_counts: dict[str, int] = {}
     for jikkyo_channel_id in jikkyo_channel_ids:
-        print(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}] Retrieve comments from {jikkyo_channel_id} broadcast during {target_date.strftime("%Y/%m/%d")}.')
-        print(Rule(characters='-', style=Style(color='#E33157')))
 
         # ダウンロードしたコメントを格納するリスト
         comments: list[XMLCompatibleComment] = []
 
         # 指定された日付に一部でも放送された実況番組のコメントをすべてダウンロード
+        print(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}] Retrieve comments from {jikkyo_channel_id} broadcast during {target_date.strftime("%Y/%m/%d")}.')
         nicolive_program_ids = await NDGRClient.getProgramIDsOnDate(jikkyo_channel_id, target_date)
         print(f'Retrieving Nicolive comments from {len(nicolive_program_ids)} programs. ({", ".join(nicolive_program_ids)})')
+        print(Rule(characters='-', style=Style(color='#E33157')))
+
+        # ニコニコ生放送番組 ID ごとに
         for nicolive_program_id in nicolive_program_ids:
 
             # NDGRClient を初期化
