@@ -98,6 +98,10 @@ async def main(
         print(f'Final comments for {jikkyo_channel_id}: {len(comments)}')
         comment_counts[jikkyo_channel_id] = len(comments)
 
+        # コメント投稿日時昇順で並び替え
+        ## ニコニコ実況と NX-Jikkyo のコメントを時系列でマージするためにこの処理が必要
+        comments.sort(key=lambda comment: comment.date_with_usec)
+
         # {kakolog_dir}/{jikkyo_channel_id}/{date.year}/{date.strftime('%Y%m%d')}.nicojk に保存
         ## 取得できたコメントが一つもない場合は実行しない
         if len(comments) > 0:
