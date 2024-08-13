@@ -480,8 +480,8 @@ websockets = "^12.0"
 [package.source]
 type = "git"
 url = "https://github.com/tsukumijima/NDGRClient"
-reference = "2da082d445636b3e01a950a970d3cec84eaeba22"
-resolved_reference = "2da082d445636b3e01a950a970d3cec84eaeba22"
+reference = "2c383c02b61cb7fc046006a26369d9817d65c165"
+resolved_reference = "2c383c02b61cb7fc046006a26369d9817d65c165"
 
 [[package]]
 name = "protobuf"
@@ -725,13 +725,13 @@ files = [
 
 [[package]]
 name = "soupsieve"
-version = "2.5"
+version = "2.6"
 description = "A modern CSS selector implementation for Beautiful Soup."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "soupsieve-2.5-py3-none-any.whl", hash = "sha256:eaa337ff55a1579b6549dc679565eac1e3d000563bcb1c8ab0d0fefbc0c2cdc7"},
-    {file = "soupsieve-2.5.tar.gz", hash = "sha256:5663d5a7b3bfaeee0bc4372e7fc48f9cff4940b3eec54a6451cc5299f1097690"},
+    {file = "soupsieve-2.6-py3-none-any.whl", hash = "sha256:e72c4ff06e4fb6e4b5a9f0f55fe6e81514581fca1515028625d0f299c602ccc9"},
+    {file = "soupsieve-2.6.tar.gz", hash = "sha256:e2e68417777af359ec65daac1057404a3c8a5455bb8abc36f1a9866ab1a51abb"},
 ]
 
 [[package]]
@@ -879,4 +879,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "16c28bc44e5e23f264ac5fec67d8e15270ae8cbf0ea0e7d5662bf10d62383080"
+content-hash = "3e03f129d3736b209014db7b398419a9fb207402d0d81220196670e6c9675e39"
