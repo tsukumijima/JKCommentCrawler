@@ -180,11 +180,6 @@ class NXClient:
         # NX-Jikkyo から取得したコメントデータをニコニコ XML 互換コメント形式に変換する
         xml_compatible_comments: list[XMLCompatibleComment] = []
         for comment in thread.comments:
-            # ニコニコ実況に投稿され NX-Jikkyo にリアルタイムマージされたコメントを除外する
-            if ignore_nicolive_comments is True and comment.user_id.startswith('nicolive:') is True:
-                self.print(f'Skipped a comment from nicolive: {comment.user_id}', verbose_log=True)
-                self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
-                continue
             xml_comment = XMLCompatibleComment(
                 # スレッド ID は NX-Jikkyo のスレッド ID を文字列化したものをそのまま入れる
                 thread = str(comment.thread_id),
@@ -198,8 +193,14 @@ class NXClient:
                 anonymity = 1 if comment.anonymity is True else None,
                 content = comment.content,
             )
-            xml_compatible_comments.append(xml_comment)
-            self.print(str(comment), verbose_log=True)
+            # ニコニコ実況に投稿され NX-Jikkyo にリアルタイムマージされたコメントを除外する
+            if ignore_nicolive_comments is True and comment.user_id.startswith('nicolive:') is True:
+                xml_comment.user_id = xml_comment.user_id.replace('nicolive:', '')
+                self.print(str(xml_comment), verbose_log=True)
+                self.print(f'[yellow]Skipped a comment from nicolive.[/yellow]', verbose_log=True)
+            else:
+                self.print(str(xml_comment), verbose_log=True)
+                xml_compatible_comments.append(xml_comment)
             self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
 
         self.print(f'Retrieved a total of {len(xml_compatible_comments)} comments.')
