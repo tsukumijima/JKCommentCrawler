@@ -12,7 +12,7 @@ from rich import print
 from rich.rule import Rule
 from rich.style import Style
 
-from jkcommentcrawler import __version__
+from jkcommentcrawler import NXClient, __version__
 
 
 app = AsyncTyper()
@@ -28,6 +28,7 @@ async def main(
     date: str = typer.Argument(help='取得する日付。(ex: 2020/12/19) 時刻情報は無視される。'),
     save_dataset_structure_json: bool = typer.Option(False, '--save-dataset-structure-json', help='過去ログデータのフォルダ/ファイル構造を示す JSON ファイルを出力する。'),
     force: bool = typer.Option(False, '-f', '--force', help='以前取得したログの方が文字数が多い場合でも上書きする。'),
+    verbose: bool = typer.Option(False, '-v', '--verbose', help='詳細なログを表示する。'),
     version: bool = typer.Option(None, '--version', callback=version, is_eager=True, help='バージョン情報を表示する。'),
 ):
     print(Rule(characters='=', style=Style(color='#E33157')))
@@ -47,11 +48,11 @@ async def main(
 
     # jikkyo_id に 'all' が指定された場合は全てのチャンネルをダウンロード
     if channel_id == 'all':
-        jikkyo_channel_ids = [id for id in NDGRClient.JIKKYO_CHANNEL_ID_MAP.keys()]
+        jikkyo_channel_ids = NXClient.JIKKYO_CHANNEL_ID_LIST.copy()
     else:
         jikkyo_channel_ids = [channel_id]
 
-    # 過去ログ収集対象のニコニコ実況チャンネルごとに実行
+    # 過去ログ収集対象のニコニコ実況チャンネルごとに
     await NDGRClient.updateJikkyoChannelIDMap()
     comment_counts: dict[str, int] = {}
     for jikkyo_channel_id in jikkyo_channel_ids:
@@ -59,16 +60,27 @@ async def main(
         # 3回までリトライ
         for retry_count in range(3):
             try:
-                # ダウンロードしたコメントを格納するリスト
-                comments: list[XMLCompatibleComment] = []
-
-                # 指定された日付に一部でも放送された実況番組のコメントをすべてダウンロード
                 print(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
                       f'Retrieve comments broadcast during {target_date.strftime("%Y/%m/%d")}.')
-                nicolive_program_ids = await NDGRClient.getProgramIDsOnDate(jikkyo_channel_id, target_date)
-                print(f'Retrieving Nicolive comments from {len(nicolive_program_ids)} programs.' +
-                      (f' ({", ".join(nicolive_program_ids)})' if len(nicolive_program_ids) > 1 else ''))
+
+                # 指定された日付に一部でも放送されたニコニコ生放送番組を取得
+                ## NX-Jikkyo にはあるが本家ニコニコ実況に存在しない実況チャンネル (ex: jk141) では実行しない
+                if jikkyo_channel_id not in NDGRClient.JIKKYO_CHANNEL_ID_MAP:
+                    nicolive_program_ids = []
+                    print(f'Skipping retrieval of Nicolive comments as the channel {jikkyo_channel_id} does not exist on Nicolive.')
+                else:
+                    nicolive_program_ids = await NDGRClient.getProgramIDsOnDate(jikkyo_channel_id, target_date)
+                    print(f'Retrieving Nicolive comments from {len(nicolive_program_ids)} programs.' +
+                          (f' ({", ".join(nicolive_program_ids)})' if len(nicolive_program_ids) > 1 else ''))
+
+                # 指定された日付に一部でも放送された NX-Jikkyo スレッドを取得
+                nx_thread_ids = await NXClient.getThreadIDsOnDate(jikkyo_channel_id, target_date)
+                print(f'Retrieving NX-Jikkyo comments from {len(nx_thread_ids)} threads.' +
+                      (f' ({", ".join(map(str, nx_thread_ids))})' if len(nx_thread_ids) > 1 else ''))
                 print(Rule(characters='-', style=Style(color='#E33157')))
+
+                # ダウンロードしたコメントを格納するリスト
+                comments: list[XMLCompatibleComment] = []
 
                 # ニコニコ生放送番組 ID ごとに
                 for nicolive_program_id in nicolive_program_ids:
@@ -103,6 +115,15 @@ async def main(
                         NDGRClient.convertToXMLCompatibleComment(comment)
                         for comment in await ndgr_client.downloadBackwardComments()
                     ])
+
+                # NX-Jikkyo スレッドごとに
+                for nx_thread_id in nx_thread_ids:
+
+                    # NXClient を初期化
+                    nx_client = NXClient(nx_thread_id, verbose=False, console_output=True)
+
+                    # コメントをダウンロードしてリストに追加
+                    comments.extend(await nx_client.downloadBackwardComments())
 
                 # 指定された日付以外に投稿されたコメントを除外
                 print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')

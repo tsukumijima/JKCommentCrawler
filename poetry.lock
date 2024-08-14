@@ -480,8 +480,8 @@ websockets = "^12.0"
 [package.source]
 type = "git"
 url = "https://github.com/tsukumijima/NDGRClient"
-reference = "2c383c02b61cb7fc046006a26369d9817d65c165"
-resolved_reference = "2c383c02b61cb7fc046006a26369d9817d65c165"
+reference = "eb2d398ff0cf2753232d9e6d31c3263dc40c3a8d"
+resolved_reference = "eb2d398ff0cf2753232d9e6d31c3263dc40c3a8d"
 
 [[package]]
 name = "protobuf"
@@ -879,4 +879,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<3.12"
-content-hash = "3e03f129d3736b209014db7b398419a9fb207402d0d81220196670e6c9675e39"
+content-hash = "0086e22940d64285a6488d3f0525f71059d6d754c41964fa486420a1bac44312"

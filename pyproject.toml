@@ -7,7 +7,7 @@ python = ">=3.11,<3.12"
 requests = "^2.32.3"
 python-dateutil = "^2.9.0.post0"
 websocket-client = "^1.8.0"
-ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "2c383c02b61cb7fc046006a26369d9817d65c165" }
+ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "eb2d398ff0cf2753232d9e6d31c3263dc40c3a8d" }
 
 [tool.poetry.group.dev.dependencies]
 
