@@ -111,7 +111,8 @@ class NXClient:
 
             # スレッド情報取得 API にリクエスト
             ## 実況チャンネル ID に紐づく過去全スレッドの情報を取得できる
-            response = await client.get(f'https://nx-jikkyo.tsukumijima.net/api/v1/channels/{jikkyo_channel_id}/threads')
+            ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
+            response = await client.get(f'https://nx-jikkyo.tsukumijima.net/api/v1/channels/{jikkyo_channel_id}/threads', timeout=30)
             response.raise_for_status()
             threads = TypeAdapter(list[ThreadInfo]).validate_json(response.content)
 
@@ -165,7 +166,8 @@ class NXClient:
             comments: list[CommentResponse]
 
         # スレッド取得 API にリクエスト
-        response = await self.httpx_client.get(f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}')
+        ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
+        response = await self.httpx_client.get(f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}', timeout=30)
         response.raise_for_status()
         thread: ThreadResponse = TypeAdapter(ThreadResponse).validate_json(response.content)
         self.print(f'Title:  {thread.title} [{thread.status}] ({thread.id})')
