@@ -17,6 +17,7 @@ SCRIPT_PATH="$(readlink -f "$0")"
 
 # スクリプトが存在するディレクトリのパスを取得
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+cd ${SCRIPT_DIR}
 
 # ログフォルダがなければ作成
 if [ ! -d ${SCRIPT_DIR}/log ]; then

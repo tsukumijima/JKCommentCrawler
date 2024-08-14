@@ -71,12 +71,12 @@ async def main(
                 else:
                     nicolive_program_ids = await NDGRClient.getProgramIDsOnDate(jikkyo_channel_id, target_date)
                     print(f'Retrieving Nicolive comments from {len(nicolive_program_ids)} programs.' +
-                          (f' ({", ".join(nicolive_program_ids)})' if len(nicolive_program_ids) > 1 else ''))
+                          (f' ({", ".join(nicolive_program_ids)})' if len(nicolive_program_ids) > 0 else ''))
 
                 # 指定された日付に一部でも放送された NX-Jikkyo スレッドを取得
                 nx_thread_ids = await NXClient.getThreadIDsOnDate(jikkyo_channel_id, target_date)
                 print(f'Retrieving NX-Jikkyo comments from {len(nx_thread_ids)} threads.' +
-                      (f' ({", ".join(map(str, nx_thread_ids))})' if len(nx_thread_ids) > 1 else ''))
+                      (f' ({", ".join(map(str, nx_thread_ids))})' if len(nx_thread_ids) > 0 else ''))
                 print(Rule(characters='-', style=Style(color='#E33157')))
 
                 # ダウンロードしたコメントを格納するリスト
