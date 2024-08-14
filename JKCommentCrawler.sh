@@ -30,7 +30,7 @@ if [[ $1 = 'cron_minutes' ]]; then
 
     # 今日分の JKCommentCrawler を実行
     echo 'JKCommentCrawler.sh (Cron minutes)'
-    ${SCRIPT_DIR}/.venv/bin/python ${SCRIPT_DIR}/JKCommentCrawler.py all `date +"%Y/%m/%d"` --save-dataset-structure-json \
+    ${SCRIPT_DIR}/.venv/bin/python -m jkcommentcrawler all `date +"%Y/%m/%d"` --save-dataset-structure-json \
     1>  ${SCRIPT_DIR}/log/minutes.log \
     2>> ${SCRIPT_DIR}/log/minutes.error.log
 
@@ -42,14 +42,14 @@ elif [[ $1 = 'cron_daily' ]]; then
     ## ニコ生の実況番組の放送終了後にスパム判定されたコメント (特に AA) がごっそり削除されることがあり、
     ## それによって新しいログが保存されなくなる事態を避ける
     echo 'JKCommentCrawler.sh (Cron daily)'
-    ${SCRIPT_DIR}/.venv/bin/python ${SCRIPT_DIR}/JKCommentCrawler.py all `date -d '-1 day' +"%Y/%m/%d"` --save-dataset-structure-json --force \
+    ${SCRIPT_DIR}/.venv/bin/python -m jkcommentcrawler all `date -d '-1 day' +"%Y/%m/%d"` --save-dataset-structure-json --force \
     1>  ${SCRIPT_DIR}/log/daily.log \
     2>> ${SCRIPT_DIR}/log/daily.error.log
 
 # 通常実行
 else
     echo 'JKCommentCrawler.sh (Nornal)'
-    ${SCRIPT_DIR}/.venv/bin/python ${SCRIPT_DIR}/JKCommentCrawler.py all `date +"%Y/%m/%d"` --save-dataset-structure-json
+    ${SCRIPT_DIR}/.venv/bin/python -m jkcommentcrawler all `date +"%Y/%m/%d"` --save-dataset-structure-json
 fi
 
 # Hugging Face (KakologArchives) に commit & push する

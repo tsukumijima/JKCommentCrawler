@@ -42,7 +42,7 @@ async def main(
         raise Exception('JKCommentCrawler.ini not found. Copy from JKCommentCrawler.example.ini and edit it as needed.')
     config = configparser.ConfigParser()
     config.read(config_ini, encoding='utf-8')
-    kakolog_dir: Path = Path(config.get('Default', 'jkcomment_folder').rstrip('/') + 'test').resolve()
+    kakolog_dir: Path = Path(config.get('Default', 'jkcomment_folder').rstrip('/')).resolve()
     niconico_mail: str = config.get('Default', 'nicologin_mail')
     niconico_password: str = config.get('Default', 'nicologin_password')
 
