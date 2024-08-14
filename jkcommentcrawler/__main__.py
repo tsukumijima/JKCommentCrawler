@@ -86,7 +86,7 @@ async def main(
                 for nicolive_program_id in nicolive_program_ids:
 
                     # NDGRClient を初期化
-                    ndgr_client = NDGRClient(nicolive_program_id, verbose=False, console_output=True)
+                    ndgr_client = NDGRClient(nicolive_program_id, verbose=verbose, console_output=True)
 
                     # ニコニコアカウントにログイン (タイムシフト再生に必要)
                     ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
@@ -120,7 +120,7 @@ async def main(
                 for nx_thread_id in nx_thread_ids:
 
                     # NXClient を初期化
-                    nx_client = NXClient(nx_thread_id, verbose=False, console_output=True)
+                    nx_client = NXClient(nx_thread_id, verbose=verbose, console_output=True)
 
                     # コメントをダウンロードしてリストに追加
                     comments.extend(await nx_client.downloadBackwardComments())
