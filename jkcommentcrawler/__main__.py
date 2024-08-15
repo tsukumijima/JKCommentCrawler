@@ -19,13 +19,13 @@ app = AsyncTyper()
 
 def version(value: bool):
     if value is True:
-        typer.echo(f'NX-Jikkyo version {__version__}')
+        typer.echo(f'JKCommentCrawler version {__version__}')
         raise typer.Exit()
 
 @app.command(help='JKCommentCrawler: Nico Nico Jikkyo Comment Crawler')
 async def main(
-    channel_id: str = typer.Argument(help='取得する実況チャンネル。(ex: jk211) all を指定すると全チャンネルのコメントを取得する。'),
-    date: str = typer.Argument(help='取得する日付。(ex: 2020/12/19) 時刻情報は無視される。'),
+    channel_id: str = typer.Argument(help='コメントを収集する実況チャンネル。(ex: jk211) all を指定すると全チャンネルのコメントを収集する。'),
+    date: str = typer.Argument(help='コメントを収集する日付。(ex: 2024/08/05)'),
     save_dataset_structure_json: bool = typer.Option(False, '--save-dataset-structure-json', help='過去ログデータのフォルダ/ファイル構造を示す JSON ファイルを出力する。'),
     force: bool = typer.Option(False, '-f', '--force', help='以前取得したログの方が文字数が多い場合でも上書きする。'),
     verbose: bool = typer.Option(False, '-v', '--verbose', help='詳細なログを表示する。'),
