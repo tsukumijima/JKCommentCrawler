@@ -193,6 +193,7 @@ async def main(
                     print(f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
                           f'Unexpected error occurred. Retrying failed. Skipping ...')
                     print(traceback.format_exc())
+                print(Rule(characters='=', style=Style(color='#E33157')))
 
     # 全チャンネルをダウンロードしたときは、各チャンネルごとの合計コメント数を表示
     if channel_id == 'all':
