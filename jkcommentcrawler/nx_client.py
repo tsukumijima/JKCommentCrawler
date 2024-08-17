@@ -37,6 +37,8 @@ class NXClient:
         'jk10',
         'jk11',
         'jk12',
+        'jk13',
+        'jk14',
         'jk101',
         'jk103',
         'jk141',

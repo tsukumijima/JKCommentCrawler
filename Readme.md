@@ -41,6 +41,8 @@
 - `jk10` : テレ玉 - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk10)
 - `jk11` : tvk - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk11)
 - `jk12` : チバテレビ - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk12)
+- `jk13` : サンテレビ - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk13)
+- `jk14` : KBS京都 - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk14)
 
 ### BS・CS
 
