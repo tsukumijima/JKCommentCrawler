@@ -53,7 +53,6 @@ async def main(
         jikkyo_channel_ids = [channel_id]
 
     # 過去ログ収集対象のニコニコ実況チャンネルごとに
-    await NDGRClient.updateJikkyoChannelIDMap()
     comment_counts: dict[str, int] = {}
     for jikkyo_channel_id in jikkyo_channel_ids:
 
