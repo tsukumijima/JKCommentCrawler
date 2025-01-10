@@ -56,6 +56,8 @@
 - `jk191` : WOWOW PRIME - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk191)
 - `jk192` : WOWOW LIVE - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk192)
 - `jk193` : WOWOW CINEMA - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk193)
+- `jk200` : BS10 - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk200)
+- `jk201` : BS10スターチャンネル - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk201)
 - `jk211` : BS11 - [[ニコニコ実況]](https://live.nicovideo.jp/watch/ch2646846) [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk211)
 - `jk222` : BS12 - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk222)
 - `jk236` : BSアニマックス - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk236)

@@ -49,6 +49,8 @@ class NXClient:
         'jk191',
         'jk192',
         'jk193',
+        'jk200',
+        'jk201',
         'jk211',
         'jk222',
         'jk236',
