@@ -4,7 +4,7 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "b5124e67c17e0643cc355ae36811ab3302e768d3" }
+ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "094c3beb7a8b18616d1e2fe17a519c4f0c38b78d" }
 
 [tool.poetry.group.dev.dependencies]
 

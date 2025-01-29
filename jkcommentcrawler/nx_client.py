@@ -203,7 +203,7 @@ class NXClient:
             if ignore_nicolive_comments is True and comment.user_id.startswith('nicolive:') is True:
                 xml_comment.user_id = xml_comment.user_id.replace('nicolive:', '')
                 self.print(str(xml_comment), verbose_log=True)
-                self.print(f'[yellow]Skipped a comment from nicolive.[/yellow]', verbose_log=True)
+                self.print('[yellow]Skipped a comment from nicolive.[/yellow]', verbose_log=True)
             else:
                 self.print(str(xml_comment), verbose_log=True)
                 xml_compatible_comments.append(xml_comment)
