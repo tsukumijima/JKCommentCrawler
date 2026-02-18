@@ -8,7 +8,7 @@ format = "ruff format ."
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
-ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "92c34cdddf5663a9fdf645ecb1e40b2dd0d6ea65" }
+ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "2f0421ad8b1993332202afd023d8cea3e5ef28d2" }
 
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.9.1"
