@@ -63,8 +63,8 @@ async def main(
     # 過去ログ収集対象のニコニコ実況チャンネルごとに
     comment_counts: dict[str, int] = {}
     for jikkyo_channel_id in jikkyo_channel_ids:
-        # 3回までリトライ
-        for retry_count in range(3):
+        # 最初の取得が失敗した場合は3回までリトライ
+        for retry_count in range(4):
             try:
                 print(
                     f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
