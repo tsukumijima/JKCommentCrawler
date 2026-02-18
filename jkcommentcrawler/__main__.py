@@ -3,8 +3,8 @@ import configparser
 import json
 import traceback
 from datetime import datetime
-from pathlib import Path
 
+import anyio
 import typer
 from ndgr_client import NDGRClient, XMLCompatibleComment
 from ndgr_client.utils import AsyncTyper
@@ -45,12 +45,12 @@ async def main(
         raise Exception('Target date is in the future.')
 
     # 設定読み込み
-    config_ini = Path(__file__).parent.parent / 'JKCommentCrawler.ini'
-    if not config_ini.exists():
+    config_ini = anyio.Path(__file__).parent.parent / 'JKCommentCrawler.ini'
+    if not await config_ini.exists():
         raise Exception('JKCommentCrawler.ini not found. Copy from JKCommentCrawler.example.ini and edit it as needed.')
     config = configparser.ConfigParser()
     config.read(config_ini, encoding='utf-8')
-    kakolog_dir: Path = Path(config.get('Default', 'jkcomment_folder').rstrip('/')).resolve()
+    kakolog_dir: anyio.Path = await anyio.Path(config.get('Default', 'jkcomment_folder').rstrip('/')).resolve()
     niconico_mail: str = config.get('Default', 'nicologin_mail')
     niconico_password: str = config.get('Default', 'nicologin_password')
 
@@ -103,25 +103,25 @@ async def main(
 
                     # ニコニコアカウントにログイン (タイムシフト再生に必要)
                     ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
-                    cookies_json = Path(__file__).parent.parent / 'cookies.json'
-                    if cookies_json.exists():
-                        with open(cookies_json, encoding='utf-8') as f:
-                            cookies_dict = json.load(f)
+                    cookies_json = anyio.Path(__file__).parent.parent / 'cookies.json'
+                    if await cookies_json.exists():
+                        async with await cookies_json.open(encoding='utf-8') as f:
+                            cookies_dict = json.loads(await f.read())
                         cookies_dict = await ndgr_client.login(cookies=cookies_dict)
                         # もし None が返る場合はログインセッションが切れた可能性が高いので、メールアドレスとパスワードを指定して再ログインを実行
                         if cookies_dict is None:
                             cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                             if cookies_dict is None:
                                 raise Exception('Failed to login to niconico.')
-                            with open(cookies_json, 'w', encoding='utf-8') as f:
-                                json.dump(cookies_dict, f)
+                            async with await cookies_json.open('w', encoding='utf-8') as f:
+                                await f.write(json.dumps(cookies_dict))
                     else:
                         # cookies.json が存在しない場合は新規ログインを実行
                         cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                         if cookies_dict is None:
                             raise Exception('Failed to login to niconico.')
-                        with open(cookies_json, 'w', encoding='utf-8') as f:
-                            json.dump(cookies_dict, f)
+                        async with await cookies_json.open('w', encoding='utf-8') as f:
+                            await f.write(json.dumps(cookies_dict))
 
                     # コメントをダウンロードしてリストに追加
                     comments.extend(
@@ -158,16 +158,16 @@ async def main(
                 ## 取得できたコメントが1つもない場合は実行しない
                 if len(comments) > 0:
                     output_dir = kakolog_dir / jikkyo_channel_id / str(target_date.year)
-                    output_dir.mkdir(parents=True, exist_ok=True)
+                    await output_dir.mkdir(parents=True, exist_ok=True)
                     output_file = output_dir / f'{target_date.strftime("%Y%m%d")}.nicojk'
 
                     # コメントリストを XML 文字列に変換
                     xml_content = NDGRClient.convertToXMLString(comments)
 
                     # 既存の XML ファイルがあれば文字数を取得
-                    if output_file.exists():
-                        with open(output_file, encoding='utf-8') as f:
-                            existing_length = len(f.read())
+                    if await output_file.exists():
+                        async with await output_file.open(encoding='utf-8') as f:
+                            existing_length = len(await f.read())
                     else:
                         existing_length = 0
 
@@ -191,8 +191,8 @@ async def main(
                                 f'(Previous: {existing_length} chars, Current: {len(xml_content)} chars)'
                             )
                         # ファイルに書き込む
-                        with open(output_file, 'w', encoding='utf-8') as f:
-                            f.write(xml_content)
+                        async with await output_file.open('w', encoding='utf-8') as f:
+                            await f.write(xml_content)
                         print(f'Log saved to {output_file}.')
 
                 # コメントが1件も取得できていない場合はスキップ
@@ -233,21 +233,26 @@ async def main(
     # --save-dataset-structure-json が指定されているときは、データセットの構造を JSON ファイルに保存
     if save_dataset_structure_json is True:
 
-        def get_directory_contents(directory_path: Path, nest: bool = False) -> dict[str, dict[str, dict[str, None]]]:
-            if not directory_path.exists():
+        async def get_directory_contents(
+            directory_path: anyio.Path, nest: bool = False
+        ) -> dict[str, dict[str, dict[str, None]]]:
+            if not await directory_path.exists():
                 raise FileNotFoundError(f'Directory "{directory_path}" does not exist.')
             data = {}
-            for item in sorted(directory_path.iterdir()):
-                if item.is_dir() and (item.name.startswith('jk') or nest is True):
-                    data[item.name] = get_directory_contents(item, nest=True)
-                elif item.is_file() and nest is True:
+            # anyio.Path.iterdir() は非同期イテレータを返すため、リスト内包表記で収集してからソートする
+            items = sorted([item async for item in directory_path.iterdir()])
+            for item in items:
+                if await item.is_dir() and (item.name.startswith('jk') or nest is True):
+                    data[item.name] = await get_directory_contents(item, nest=True)
+                elif await item.is_file() and nest is True:
                     data[item.name] = None
             return data
 
-        dataset_structure = get_directory_contents(kakolog_dir)
-        with open(f'{kakolog_dir}/dataset_structure.json', 'w', encoding='utf-8') as f:
-            json.dump(dataset_structure, f, ensure_ascii=False, indent=4)
-        print(f'Dataset structure saved to {kakolog_dir}/dataset_structure.json.')
+        dataset_structure = await get_directory_contents(kakolog_dir)
+        dataset_structure_file = kakolog_dir / 'dataset_structure.json'
+        async with await dataset_structure_file.open('w', encoding='utf-8') as f:
+            await f.write(json.dumps(dataset_structure, ensure_ascii=False, indent=4))
+        print(f'Dataset structure saved to {dataset_structure_file}.')
         print(Rule(characters='=', style=Style(color='#E33157')))
 
 

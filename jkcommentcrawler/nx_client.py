@@ -1,8 +1,10 @@
+import io
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-import httpx
+import anyio
+import niquests
 from ndgr_client import XMLCompatibleComment
 from pydantic import BaseModel, TypeAdapter
 from rich import print
@@ -66,7 +68,7 @@ class NXClient:
         thread_id: int,
         verbose: bool = False,
         console_output: bool = False,
-        log_path: Path | None = None,
+        log_path: Path | anyio.Path | None = None,
     ) -> None:
         """
         NXClient のコンストラクタ
@@ -75,16 +77,19 @@ class NXClient:
             thread_id (int): NX-Jikkyo のスレッド ID
             verbose (bool, default=False): 詳細な動作ログを出力するかどうか
             console_output (bool, default=False): 動作ログをコンソールに出力するかどうか
-            log_path (Path | None, default=None): 動作ログをファイルに出力する場合のパス (show_log と併用可能)
+            log_path (Path | anyio.Path | None, default=None): 動作ログをファイルに出力する場合のパス (show_log と併用可能)
         """
 
         self.thread_id = thread_id
         self.verbose = verbose
         self.show_log = console_output
-        self.log_path = log_path
+        # pathlib.Path が渡された場合は anyio.Path に変換して保持する
+        self.log_path: anyio.Path | None = anyio.Path(log_path) if isinstance(log_path, Path) else log_path
 
-        # httpx の非同期 HTTP クライアントのインスタンスを作成
-        self.httpx_client = httpx.AsyncClient(headers={'User-Agent': self.USER_AGENT}, follow_redirects=True)
+        # niquests の非同期 HTTP クライアントのインスタンスを作成
+        ## retries=1 を指定して HTTP/2 GOAWAY (graceful shutdown) 受信時の自動再接続を有効にする (httpx と同等の1回リトライ)
+        ## niquests の HTTP/3 実装はストリーミング接続周りにバグがあるようで現状安定運用に向かないため、無効化する
+        self.http_client = niquests.AsyncSession(headers={'User-Agent': self.USER_AGENT}, retries=1, disable_http3=True)
 
     @classmethod
     async def getThreadIDsOnDate(cls, jikkyo_channel_id: str, date: date) -> list[int]:
@@ -100,7 +105,7 @@ class NXClient:
 
         Raises:
             ValueError: ニコニコ実況互換のチャンネル ID が指定されていない場合
-            httpx.HTTPStatusError: NX-Jikkyo API へのリクエストに失敗した場合
+            niquests.exceptions.HTTPError: NX-Jikkyo API へのリクエストに失敗した場合
         """
 
         if jikkyo_channel_id.startswith('jk') is False:
@@ -114,8 +119,12 @@ class NXClient:
             description: str
             status: str
 
-        # クラスメソッドから self.httpx_client にはアクセスできないため、新しい httpx.AsyncClient を作成している
-        async with httpx.AsyncClient(headers={'User-Agent': cls.USER_AGENT}, follow_redirects=True) as client:
+        # クラスメソッドから self.http_client にはアクセスできないため、新しい niquests.AsyncSession を作成している
+        ## retries=1 を指定して HTTP/2 GOAWAY (graceful shutdown) 受信時の自動再接続を有効にする (httpx と同等の1回リトライ)
+        ## niquests の HTTP/3 実装はストリーミング接続周りにバグがあるようで現状安定運用に向かないため、無効化する
+        async with niquests.AsyncSession(
+            headers={'User-Agent': cls.USER_AGENT}, retries=1, disable_http3=True
+        ) as client:
             # スレッド情報取得 API にリクエスト
             ## 実況チャンネル ID に紐づく過去全スレッドの情報を取得できる
             ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
@@ -124,7 +133,7 @@ class NXClient:
                 timeout=30,
             )
             response.raise_for_status()
-            threads = TypeAdapter(list[ThreadInfo]).validate_json(response.content)
+            threads = TypeAdapter(list[ThreadInfo]).validate_json(response.content or b'')
 
         # 指定された日付に放送されているスレッドをフィルタリングし、その ID をリストで返す
         threads = [thread for thread in threads if thread.start_at.date() <= date <= thread.end_at.date()]
@@ -144,7 +153,7 @@ class NXClient:
             list[XMLCompatibleComment]: 過去に投稿されたコメントのリスト (投稿日時昇順)
 
         Raises:
-            httpx.HTTPStatusError: HTTP リクエストが失敗した場合
+            niquests.exceptions.HTTPError: HTTP リクエストが失敗した場合
             AssertionError: 解析に失敗した場合
         """
 
@@ -173,18 +182,18 @@ class NXClient:
 
         # スレッド取得 API にリクエスト
         ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
-        response = await self.httpx_client.get(
+        response = await self.http_client.get(
             f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}',
             timeout=30,
         )
         response.raise_for_status()
-        thread: ThreadResponse = TypeAdapter(ThreadResponse).validate_json(response.content)
-        self.print(f'Title:  {thread.title} [{thread.status}] ({thread.id})')
-        self.print(
+        thread: ThreadResponse = TypeAdapter(ThreadResponse).validate_json(response.content or b'')
+        await self.print(f'Title:  {thread.title} [{thread.status}] ({thread.id})')
+        await self.print(
             f'Period: {thread.start_at.strftime("%Y-%m-%d %H:%M:%S")} ~ {thread.end_at.strftime("%Y-%m-%d %H:%M:%S")} '
             f'({thread.end_at - thread.start_at}h)'
         )
-        self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
+        await self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
 
         # 基本投稿日時昇順でソートされているはずだが、念のためここでもソートする
         ## この後の処理で date は秒単位とミリ秒単位に分割するため、ここでソートしておかないと色々面倒
@@ -209,18 +218,18 @@ class NXClient:
             # ニコニコ実況に投稿され NX-Jikkyo にリアルタイムマージされたコメントを除外する
             if ignore_nicolive_comments is True and comment.user_id.startswith('nicolive:') is True:
                 xml_comment.user_id = xml_comment.user_id.replace('nicolive:', '')
-                self.print(str(xml_comment), verbose_log=True)
-                self.print('[yellow]Skipped a comment from nicolive.[/yellow]', verbose_log=True)
+                await self.print(str(xml_comment), verbose_log=True)
+                await self.print('[yellow]Skipped a comment from nicolive.[/yellow]', verbose_log=True)
             else:
-                self.print(str(xml_comment), verbose_log=True)
+                await self.print(str(xml_comment), verbose_log=True)
                 xml_compatible_comments.append(xml_comment)
-            self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
+            await self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
 
-        self.print(f'Retrieved a total of {len(xml_compatible_comments)} comments.')
-        self.print(Rule(characters='-', style=Style(color='#E33157')))
+        await self.print(f'Retrieved a total of {len(xml_compatible_comments)} comments.')
+        await self.print(Rule(characters='-', style=Style(color='#E33157')))
         return xml_compatible_comments
 
-    def print(self, *args: Any, verbose_log: bool = False, **kwargs: Any) -> None:
+    async def print(self, *args: Any, verbose_log: bool = False, **kwargs: Any) -> None:
         """
         NXClient の動作ログをコンソールやファイルに出力する
 
@@ -237,6 +246,10 @@ class NXClient:
             print(*args, **kwargs)
 
         # ログファイルのパスが指定されている場合は、ログをファイルにも出力
+        # anyio.Path を使って非同期でファイルに書き込むことで、イベントループのブロックを回避する
         if self.log_path is not None:
-            with self.log_path.open('a') as f:
-                print(*args, **kwargs, file=f)
+            async with await self.log_path.open('a') as f:
+                # print() の出力を文字列として構築してからファイルに書き込む
+                string_buffer = io.StringIO()
+                print(*args, **kwargs, file=string_buffer)
+                await f.write(string_buffer.getvalue())
