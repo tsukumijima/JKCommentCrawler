@@ -2,12 +2,55 @@
 name = "JKCommentCrawler"
 package-mode = false
 
+[tool.taskipy.tasks]
+lint = "ruff check --fix ."
+format = "ruff format ."
+
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "92c34cdddf5663a9fdf645ecb1e40b2dd0d6ea65" }
 
 [tool.poetry.group.dev.dependencies]
+ruff = ">=0.9.1"
+taskipy = ">=1.13.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+# 1行の長さを最大120文字に設定
+line-length = 120
+# インデントの幅を4スペースに設定
+indent-width = 4
+# Python 3.11 を利用する
+target-version = "py311"
+# ndgr_client/proto/ ディレクトリは対象から除外する
+extend-exclude = ["ndgr_client/proto/"]
+
+[tool.ruff.lint]
+# flake8, pycodestyle, pyupgrade, isort, Ruff 固有のルールを使う
+select = ["F", "E", "W", "UP", "I", "RUF", "TID251"]
+ignore = [
+    "E501",    # 1行の長さを超えている場合の警告を抑制
+    "E731",    # Do not assign a `lambda` expression, use a `def` を抑制
+    "RUF001",  # 全角記号など `ambiguous unicode character` も使いたいため
+    "RUF002",  # 全角記号など `ambiguous unicode character` も使いたいため
+    "RUF003",  # 全角記号など `ambiguous unicode character` も使いたいため
+    "RUF012",
+]
+
+[tool.ruff.lint.isort]
+# インポートブロックの後に2行空ける
+lines-after-imports = 2
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Python 3.11 + Pydantic で TypedDict を扱う際は、typing_extensions.TypedDict を使う必要がある
+# ref: https://github.com/langchain-ai/langgraph/pull/2910
+"typing.TypedDict".msg = "Use typing_extensions.TypedDict instead."
+
+[tool.ruff.format]
+# シングルクオートを使う
+quote-style = "single"
+# インデントにはスペースを使う
+indent-style = "space"

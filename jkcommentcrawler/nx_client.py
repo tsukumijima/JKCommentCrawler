@@ -1,13 +1,13 @@
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Literal
 
 import httpx
-from datetime import date, datetime
 from ndgr_client import XMLCompatibleComment
-from pathlib import Path
 from pydantic import BaseModel, TypeAdapter
 from rich import print
 from rich.rule import Rule
 from rich.style import Style
-from typing import Any, Literal
 
 from jkcommentcrawler import __version__
 
@@ -61,8 +61,13 @@ class NXClient:
         'jk333',
     ]
 
-
-    def __init__(self, thread_id: int, verbose: bool = False, console_output: bool = False, log_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        thread_id: int,
+        verbose: bool = False,
+        console_output: bool = False,
+        log_path: Path | None = None,
+    ) -> None:
         """
         NXClient のコンストラクタ
 
@@ -80,7 +85,6 @@ class NXClient:
 
         # httpx の非同期 HTTP クライアントのインスタンスを作成
         self.httpx_client = httpx.AsyncClient(headers={'User-Agent': self.USER_AGENT}, follow_redirects=True)
-
 
     @classmethod
     async def getThreadIDsOnDate(cls, jikkyo_channel_id: str, date: date) -> list[int]:
@@ -112,24 +116,22 @@ class NXClient:
 
         # クラスメソッドから self.httpx_client にはアクセスできないため、新しい httpx.AsyncClient を作成している
         async with httpx.AsyncClient(headers={'User-Agent': cls.USER_AGENT}, follow_redirects=True) as client:
-
             # スレッド情報取得 API にリクエスト
             ## 実況チャンネル ID に紐づく過去全スレッドの情報を取得できる
             ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
-            response = await client.get(f'https://nx-jikkyo.tsukumijima.net/api/v1/channels/{jikkyo_channel_id}/threads', timeout=30)
+            response = await client.get(
+                f'https://nx-jikkyo.tsukumijima.net/api/v1/channels/{jikkyo_channel_id}/threads',
+                timeout=30,
+            )
             response.raise_for_status()
             threads = TypeAdapter(list[ThreadInfo]).validate_json(response.content)
 
         # 指定された日付に放送されているスレッドをフィルタリングし、その ID をリストで返す
-        threads = [
-            thread for thread in threads
-            if thread.start_at.date() <= date <= thread.end_at.date()
-        ]
+        threads = [thread for thread in threads if thread.start_at.date() <= date <= thread.end_at.date()]
 
         # ID を放送開始日時が早い順に並べ替えてから返す
         threads.sort(key=lambda x: x.start_at)
         return [thread.id for thread in threads]
-
 
     async def downloadBackwardComments(self, ignore_nicolive_comments: bool = True) -> list[XMLCompatibleComment]:
         """
@@ -171,12 +173,17 @@ class NXClient:
 
         # スレッド取得 API にリクエスト
         ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
-        response = await self.httpx_client.get(f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}', timeout=30)
+        response = await self.httpx_client.get(
+            f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}',
+            timeout=30,
+        )
         response.raise_for_status()
         thread: ThreadResponse = TypeAdapter(ThreadResponse).validate_json(response.content)
         self.print(f'Title:  {thread.title} [{thread.status}] ({thread.id})')
-        self.print(f'Period: {thread.start_at.strftime("%Y-%m-%d %H:%M:%S")} ~ {thread.end_at.strftime("%Y-%m-%d %H:%M:%S")} '
-                   f'({thread.end_at - thread.start_at}h)')
+        self.print(
+            f'Period: {thread.start_at.strftime("%Y-%m-%d %H:%M:%S")} ~ {thread.end_at.strftime("%Y-%m-%d %H:%M:%S")} '
+            f'({thread.end_at - thread.start_at}h)'
+        )
         self.print(Rule(characters='-', style=Style(color='#E33157')), verbose_log=True)
 
         # 基本投稿日時昇順でソートされているはずだが、念のためここでもソートする
@@ -188,16 +195,16 @@ class NXClient:
         for comment in thread.comments:
             xml_comment = XMLCompatibleComment(
                 # スレッド ID は NX-Jikkyo のスレッド ID を文字列化したものをそのまま入れる
-                thread = str(comment.thread_id),
-                no = comment.no,
-                vpos = comment.vpos,
-                date = int(comment.date.timestamp()),
-                date_usec = int((comment.date.timestamp() % 1) * 1000000),
-                mail = comment.mail,
-                user_id = comment.user_id,
-                premium = 1 if comment.premium is True else None,
-                anonymity = 1 if comment.anonymity is True else None,
-                content = comment.content,
+                thread=str(comment.thread_id),
+                no=comment.no,
+                vpos=comment.vpos,
+                date=int(comment.date.timestamp()),
+                date_usec=int((comment.date.timestamp() % 1) * 1000000),
+                mail=comment.mail,
+                user_id=comment.user_id,
+                premium=1 if comment.premium is True else None,
+                anonymity=1 if comment.anonymity is True else None,
+                content=comment.content,
             )
             # ニコニコ実況に投稿され NX-Jikkyo にリアルタイムマージされたコメントを除外する
             if ignore_nicolive_comments is True and comment.user_id.startswith('nicolive:') is True:
@@ -212,7 +219,6 @@ class NXClient:
         self.print(f'Retrieved a total of {len(xml_compatible_comments)} comments.')
         self.print(Rule(characters='-', style=Style(color='#E33157')))
         return xml_compatible_comments
-
 
     def print(self, *args: Any, verbose_log: bool = False, **kwargs: Any) -> None:
         """
