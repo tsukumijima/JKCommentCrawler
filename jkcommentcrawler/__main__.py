@@ -101,43 +101,51 @@ async def main(
                     # NDGRClient を初期化
                     ndgr_client = NDGRClient(nicolive_program_id, verbose=verbose, console_output=True)
 
-                    # ニコニコアカウントにログイン (タイムシフト再生に必要)
-                    ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
-                    cookies_json = anyio.Path(__file__).parent.parent / 'cookies.json'
-                    if await cookies_json.exists():
-                        async with await cookies_json.open(encoding='utf-8') as f:
-                            cookies_dict = json.loads(await f.read())
-                        cookies_dict = await ndgr_client.login(cookies=cookies_dict)
-                        # もし None が返る場合はログインセッションが切れた可能性が高いので、メールアドレスとパスワードを指定して再ログインを実行
-                        if cookies_dict is None:
+                    try:
+                        # ニコニコアカウントにログイン (タイムシフト再生に必要)
+                        ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
+                        cookies_json = anyio.Path(__file__).parent.parent / 'cookies.json'
+                        if await cookies_json.exists():
+                            async with await cookies_json.open(encoding='utf-8') as f:
+                                cookies_dict = json.loads(await f.read())
+                            cookies_dict = await ndgr_client.login(cookies=cookies_dict)
+                            # もし None が返る場合はログインセッションが切れた可能性が高いので、メールアドレスとパスワードを指定して再ログインを実行
+                            if cookies_dict is None:
+                                cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
+                                if cookies_dict is None:
+                                    raise Exception('Failed to login to niconico.')
+                                async with await cookies_json.open('w', encoding='utf-8') as f:
+                                    await f.write(json.dumps(cookies_dict))
+                        else:
+                            # cookies.json が存在しない場合は新規ログインを実行
                             cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
                             if cookies_dict is None:
                                 raise Exception('Failed to login to niconico.')
                             async with await cookies_json.open('w', encoding='utf-8') as f:
                                 await f.write(json.dumps(cookies_dict))
-                    else:
-                        # cookies.json が存在しない場合は新規ログインを実行
-                        cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
-                        if cookies_dict is None:
-                            raise Exception('Failed to login to niconico.')
-                        async with await cookies_json.open('w', encoding='utf-8') as f:
-                            await f.write(json.dumps(cookies_dict))
 
-                    # コメントをダウンロードしてリストに追加
-                    comments.extend(
-                        [
-                            NDGRClient.convertToXMLCompatibleComment(comment)
-                            for comment in await ndgr_client.downloadBackwardComments()
-                        ]
-                    )
+                        # コメントをダウンロードしてリストに追加
+                        comments.extend(
+                            [
+                                NDGRClient.convertToXMLCompatibleComment(comment)
+                                for comment in await ndgr_client.downloadBackwardComments()
+                            ]
+                        )
+                    finally:
+                        # niquests の AsyncSession は close() しないと接続が解放されず、長時間実行時に枯渇しうる
+                        await ndgr_client.http_client.close()
 
                 # NX-Jikkyo スレッドごとに
                 for nx_thread_id in nx_thread_ids:
                     # NXClient を初期化
                     nx_client = NXClient(nx_thread_id, verbose=verbose, console_output=True)
 
-                    # コメントをダウンロードしてリストに追加
-                    comments.extend(await nx_client.downloadBackwardComments())
+                    try:
+                        # コメントをダウンロードしてリストに追加
+                        comments.extend(await nx_client.downloadBackwardComments())
+                    finally:
+                        # niquests の AsyncSession は close() しないと接続が解放されず、長時間実行時に枯渇しうる
+                        await nx_client.http_client.close()
 
                 # 指定された日付以外に投稿されたコメントを除外
                 print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
