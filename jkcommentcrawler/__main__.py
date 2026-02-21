@@ -132,7 +132,7 @@ async def main(
                             ]
                         )
                     finally:
-                        # niquests の AsyncSession は close() しないと接続が解放されず、長時間実行時に枯渇しうる
+                        # curl-cffi の AsyncSession を明示的に close して接続プールを解放する
                         await ndgr_client.http_client.close()
 
                 # NX-Jikkyo スレッドごとに
@@ -144,7 +144,7 @@ async def main(
                         # コメントをダウンロードしてリストに追加
                         comments.extend(await nx_client.downloadBackwardComments())
                     finally:
-                        # niquests の AsyncSession は close() しないと接続が解放されず、長時間実行時に枯渇しうる
+                        # curl-cffi の AsyncSession を明示的に close して接続プールを解放する
                         await nx_client.http_client.close()
 
                 # 指定された日付以外に投稿されたコメントを除外

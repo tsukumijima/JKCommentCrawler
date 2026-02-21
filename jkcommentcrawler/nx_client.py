@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import anyio
-import niquests
+import curl_cffi.requests as requests
 from ndgr_client import XMLCompatibleComment
 from pydantic import BaseModel, TypeAdapter
 from rich import print
@@ -86,10 +86,8 @@ class NXClient:
         # pathlib.Path が渡された場合は anyio.Path に変換して保持する
         self.log_path: anyio.Path | None = anyio.Path(log_path) if isinstance(log_path, Path) else log_path
 
-        # niquests の非同期 HTTP クライアントのインスタンスを作成
-        ## retries=1 を指定して HTTP/2 GOAWAY (graceful shutdown) 受信時の自動再接続を有効にする (httpx と同等の1回リトライ)
-        ## niquests の HTTP/3 実装はストリーミング接続周りにバグがあるようで現状安定運用に向かないため、無効化する
-        self.http_client = niquests.AsyncSession(headers={'User-Agent': self.USER_AGENT}, retries=1, disable_http3=True)
+        # curl-cffi の非同期 HTTP クライアントのインスタンスを作成
+        self.http_client = requests.AsyncSession(headers={'User-Agent': self.USER_AGENT})
 
     @classmethod
     async def getThreadIDsOnDate(cls, jikkyo_channel_id: str, date: date) -> list[int]:
@@ -105,7 +103,7 @@ class NXClient:
 
         Raises:
             ValueError: ニコニコ実況互換のチャンネル ID が指定されていない場合
-            niquests.exceptions.HTTPError: NX-Jikkyo API へのリクエストに失敗した場合
+            curl_cffi.requests.exceptions.HTTPError: NX-Jikkyo API へのリクエストに失敗した場合
         """
 
         if jikkyo_channel_id.startswith('jk') is False:
@@ -119,12 +117,8 @@ class NXClient:
             description: str
             status: str
 
-        # クラスメソッドから self.http_client にはアクセスできないため、新しい niquests.AsyncSession を作成している
-        ## retries=1 を指定して HTTP/2 GOAWAY (graceful shutdown) 受信時の自動再接続を有効にする (httpx と同等の1回リトライ)
-        ## niquests の HTTP/3 実装はストリーミング接続周りにバグがあるようで現状安定運用に向かないため、無効化する
-        async with niquests.AsyncSession(
-            headers={'User-Agent': cls.USER_AGENT}, retries=1, disable_http3=True
-        ) as client:
+        # クラスメソッドから self.http_client にはアクセスできないため、新しい AsyncSession を作成している
+        async with requests.AsyncSession(headers={'User-Agent': cls.USER_AGENT}) as client:
             # スレッド情報取得 API にリクエスト
             ## 実況チャンネル ID に紐づく過去全スレッドの情報を取得できる
             ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
@@ -153,7 +147,7 @@ class NXClient:
             list[XMLCompatibleComment]: 過去に投稿されたコメントのリスト (投稿日時昇順)
 
         Raises:
-            niquests.exceptions.HTTPError: HTTP リクエストが失敗した場合
+            curl_cffi.requests.exceptions.HTTPError: HTTP リクエストが失敗した場合
             AssertionError: 解析に失敗した場合
         """
 
