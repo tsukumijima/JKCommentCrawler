@@ -99,9 +99,7 @@ async def main(
                 # ニコニコ生放送番組 ID ごとに
                 for nicolive_program_id in nicolive_program_ids:
                     # NDGRClient を初期化
-                    ndgr_client = NDGRClient(nicolive_program_id, verbose=verbose, console_output=True)
-
-                    try:
+                    async with NDGRClient(nicolive_program_id, verbose=verbose, console_output=True) as ndgr_client:
                         # ニコニコアカウントにログイン (タイムシフト再生に必要)
                         ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
                         cookies_json = anyio.Path(__file__).parent.parent / 'cookies.json'
@@ -131,21 +129,13 @@ async def main(
                                 for comment in await ndgr_client.downloadBackwardComments()
                             ]
                         )
-                    finally:
-                        # curl-cffi の AsyncSession を明示的に close して接続プールを解放する
-                        await ndgr_client.http_client.close()
 
                 # NX-Jikkyo スレッドごとに
                 for nx_thread_id in nx_thread_ids:
                     # NXClient を初期化
-                    nx_client = NXClient(nx_thread_id, verbose=verbose, console_output=True)
-
-                    try:
+                    async with NXClient(nx_thread_id, verbose=verbose, console_output=True) as nx_client:
                         # コメントをダウンロードしてリストに追加
                         comments.extend(await nx_client.downloadBackwardComments())
-                    finally:
-                        # curl-cffi の AsyncSession を明示的に close して接続プールを解放する
-                        await nx_client.http_client.close()
 
                 # 指定された日付以外に投稿されたコメントを除外
                 print(f'Total comments for {jikkyo_channel_id}: {len(comments)}')
