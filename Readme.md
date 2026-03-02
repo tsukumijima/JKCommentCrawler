@@ -27,6 +27,8 @@
 > [!NOTE]
 > `jk` から始まる実況チャンネル ID は、2020/12/14 までの旧ニコニコ実況で使われていた ID 表記を概ね継承しています。  
 > 一方 `jk260` や `jk333` など、旧ニコニコ実況では存在しなかったものの、各クライアントでの慣行を継承して「`jk` + チャンネル番号」形式で振られている実況チャンネル ID もあります。
+> 
+> `jk991` は、2026年の WBC が Netflix での独占配信なことを踏まえ、[テレビ実況用チャンネルとは別の特設チャンネルとして開設された](https://ch.nicovideo.jp/ch2650071) ニコニコ実況チャンネルに対応しています。
 
 ### 地上波
 
@@ -66,6 +68,7 @@
 - `jk263` : BSJapanext - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk263)
 - `jk265` : BSよしもと - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk265)
 - `jk333` : AT-X - [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk333)
+- `jk991` : 2026年 WBC 実況用特設チャンネル - [[ニコニコ実況]](https://live.nicovideo.jp/watch/ch2650071) [[NX-Jikkyo]](https://nx-jikkyo.tsukumijima.net/watch/jk991)
 
 ## いわゆる「コミュニティ実況」と NX-Jikkyo の関係について
 
@@ -231,7 +234,7 @@ poetry run python -m jkcommentcrawler all 2024/08/05
 **`all` を指定すると、指定された日付の全実況チャンネルの過去ログを一括で収集します。**  
 
 > [!TIP]
-> この例では、 2024/08/05 内に放送された（開始時間・終了時間の片方だけ 2024/08/05 に掛かっている場合も含む）`jk1` ～ `jk333` までの全実況チャンネルの過去ログを収集し、そのうち 2024/08/05 中のコメントのみを抽出して各実況チャンネルごとに保存します。
+> この例では、 2024/08/05 内に放送された（開始時間・終了時間の片方だけ 2024/08/05 に掛かっている場合も含む）`jk1` ～ `jk333` (特設チャンネルである `jk991` も含む) までの全実況チャンネルの過去ログを収集し、そのうち 2024/08/05 中のコメントのみを抽出して各実況チャンネルごとに保存します。
 
 大方不具合は直したつもりですが、もし不具合を見つけられた場合は [Issues](https://github.com/tsukumijima/JKCommentCrawler/issues) までお願いします。
 
