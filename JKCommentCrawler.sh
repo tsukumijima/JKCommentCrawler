@@ -64,8 +64,14 @@ if [[ $last_commit_message == *"00:00" ]] || [[ $last_commit_message == *"12:00"
 else
     git commit -m "Add kakolog until ${current_time}" --amend --date=now
 fi
-git push -f
-
-# 不要な LFS オブジェクトを削除する
-## --verify-remote で、リモートに存在することを確認してから削除する
-git lfs prune --recent --verify-remote
+# Hugging Face への push が完了した場合だけ、ローカルの LFS キャッシュを削除する
+## この作業ディレクトリでは過去バージョンをローカルで checkout しないため、
+## LFS オブジェクトはリモートに送信済みなら都度ダウンロードできる履歴として扱う
+if git push -f; then
+    # 現在 checkout 中のファイルに対応する LFS キャッシュも削除対象に含める
+    ## 作業ツリー上の .nicojk 実ファイルは残るため、ローカルバックアップとしての役割は維持される
+    git lfs prune --force
+else
+    echo 'Failed to push kakolog to Hugging Face.'
+    exit 1
+fi
