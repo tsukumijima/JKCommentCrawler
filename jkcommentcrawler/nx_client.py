@@ -65,6 +65,7 @@ class NXClient:
         'jk265',
         'jk333',
         'jk991',
+        'jk992',
     ]
 
     def __init__(
