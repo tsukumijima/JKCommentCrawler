@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import time
 import warnings
 from datetime import date, datetime
 from pathlib import Path
@@ -91,8 +92,10 @@ class NXClient:
         # pathlib.Path が渡された場合は anyio.Path に変換して保持する
         self.log_path: anyio.Path | None = anyio.Path(log_path) if isinstance(log_path, Path) else log_path
 
-        # curl-cffi の非同期 HTTP クライアントのインスタンスを作成
-        self.http_client = requests.AsyncSession(headers={'User-Agent': self.USER_AGENT})
+        # NX-Jikkyo との通信は HTTP/1.1 に固定する
+        ## HTTP/2 では curl-cffi 0.16.x 以降と Caddy (Golang 製 HTTP サーバー) の組み合わせ問題により、1MiB を超えるレスポンスの受信が途中で止まる問題があるため
+        ## HTTP/2 が HTTP/1.1 より桁違いに複雑なことが原因のひとつなので、NX-Jikkyo 宛には HTTP/1.1 に固定することで回避する
+        self.http_client = requests.AsyncSession(headers={'User-Agent': self.USER_AGENT}, http_version='v1')
 
         # close() が呼び出されたかどうかを追跡するフラグ
         ## 複数回 close() が呼び出されても安全に動作するようにするために使用する
@@ -151,13 +154,17 @@ class NXClient:
             status: str
 
         # クラスメソッドから self.http_client にはアクセスできないため、新しい AsyncSession を作成している
-        async with requests.AsyncSession(headers={'User-Agent': cls.USER_AGENT}) as client:
+        async with requests.AsyncSession(headers={'User-Agent': cls.USER_AGENT}, http_version='v1') as client:
             # スレッド情報取得 API にリクエスト
             ## 実況チャンネル ID に紐づく過去全スレッドの情報を取得できる
             ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
-            response = await client.get(
-                f'https://nx-jikkyo.tsukumijima.net/api/v1/channels/{jikkyo_channel_id}/threads',
-                timeout=30,
+            url = f'https://nx-jikkyo.tsukumijima.net/api/v1/channels/{jikkyo_channel_id}/threads'
+            print(f'[{datetime.now().isoformat(timespec="seconds")}] GET {url} (HTTP/1.1)')
+            started_at = time.monotonic()
+            response = await client.get(url, timeout=30)
+            print(
+                f'NX-Jikkyo response: HTTP status {response.status_code} {len(response.content or b"")} bytes, '
+                f'elapsed {time.monotonic() - started_at:.2f}s'
             )
             response.raise_for_status()
             threads = TypeAdapter(list[ThreadInfo]).validate_json(response.content or b'')
@@ -209,9 +216,13 @@ class NXClient:
 
         # スレッド取得 API にリクエスト
         ## 割と重いのでタイムアウトを 30 秒まで余裕を持って設定している
-        response = await self.http_client.get(
-            f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}',
-            timeout=30,
+        url = f'https://nx-jikkyo.tsukumijima.net/api/v1/threads/{self.thread_id}'
+        await self.print(f'[{datetime.now().isoformat(timespec="seconds")}] GET {url} (HTTP/1.1)')
+        started_at = time.monotonic()
+        response = await self.http_client.get(url, timeout=30)
+        await self.print(
+            f'NX-Jikkyo response: HTTP status {response.status_code} {len(response.content or b"")} bytes, '
+            f'elapsed {time.monotonic() - started_at:.2f}s'
         )
         response.raise_for_status()
         thread: ThreadResponse = TypeAdapter(ThreadResponse).validate_json(response.content or b'')
