@@ -18,6 +18,7 @@ from rich.rule import Rule
 from rich.style import Style
 
 from jkcommentcrawler import NXClient, __version__
+from jkcommentcrawler.notify import send_discord_report
 
 
 app = AsyncTyper()
@@ -326,6 +327,16 @@ async def main(
     if failed_channels:
         print(f'Download failed for channels: {", ".join(failed_channels)}')
     if oauth_failed is True or failed_channels:
+        # 失敗の中身は収集側が知っているので、シェルを待たずにここで報告する
+        details: list[str] = [f'過去ログ収集に失敗しました。\n日付: {target_date}']
+        if oauth_failed is True:
+            details.append('OAuth 認証に失敗しました。NDGRClient の authorize で oauth.json を作り直してください。')
+        if failed_channels:
+            details.append(f'失敗したチャンネル: {", ".join(failed_channels)}')
+        try:
+            send_discord_report('\n'.join(details))
+        except Exception as ex:
+            print(f'Failed to send Discord notification: {type(ex).__name__}')
         raise typer.Exit(code=1)
 
 

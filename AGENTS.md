@@ -42,7 +42,7 @@ poetry run task lint      # ruff check --fix .
 poetry run task format    # ruff format .
 ```
 
-実行前に `JKCommentCrawler.ini` (過去ログ保存先フォルダ) の設定が必須。  
+実行前に `JKCommentCrawler.ini` (過去ログ保存先フォルダと任意の Discord Webhook) の設定が必須。  
 `JKCommentCrawler.example.ini` をコピーして使う。  
 `JKCommentCrawler.ini` / `oauth.json` / `cookies.json` / `kakolog*` はいずれも Git 管理外 (`.gitignore` 参照)。
 
@@ -54,13 +54,14 @@ OAuth トークンの更新・保存は NDGRClient が自動で行う。
 
 OAuth の失効 (再認可が必要な状態) は `NiconicoOAuthError` になる。  
 ニコ生の残りの番組は打ち切り、NX-Jikkyo と他チャンネルの収集は続ける。  
-実行末尾で終了コード1を返す。  
+実行末尾で終了コード1を返し、収集本体から Discord にも報告する。  
 復旧は NDGRClient の `authorize` コマンドで `oauth.json` を作り直す。
 
 ## ディレクトリ構成
 
 - `jkcommentcrawler/__main__.py`: CLI エントリーポイント、収集・保存ロジック本体
 - `jkcommentcrawler/nx_client.py`: NX-Jikkyo 向けのコメント取得クライアント
+- `jkcommentcrawler/notify.py`: 収集や公開の失敗を Discord へ報告する
 - `JKCommentCrawler.ini`: 実行時設定 (Git 管理外、`.example.ini` からコピーして使う)
 - `JKCommentCrawler.sh`: cron 実行用シェルスクリプト。過去ログ収集後、`kakolog/` を Hugging Face へ push するところまで含む
 - `kakolog`: 過去ログ保存先へのシンボリックリンク。実体は `/mnt/ssd1/JKCommentCrawler-Kakolog/` にあり、JKCommentCrawler 本体とは別の独立した Git リポジトリ (Hugging Face の KakologArchives データセットと連携)
@@ -86,6 +87,12 @@ OAuth の失効 (再認可が必要な状態) は `NiconicoOAuthError` になる
 - 実行中は `python -m jkcommentcrawler` によるコメント収集に加え、`kakolog/` 配下で `git add` / `git commit --amend` / `git push -f` / `git lfs prune --force` が動く
 - **AI エージェントは、自分が起動していない git プロセスを異常だと誤認して kill してはいけない。** 過去に、cron 実行中の git プロセスを誤って kill してしまった事故が実際に発生している。プロセスが長時間動いている・CPU 使用率が高いといった見た目だけで「フリーズしている」と判断せず、まず cron による定期実行の途中である可能性を疑うこと
 - 稼働中の `JKCommentCrawler.sh` を更新する際は、別ファイルへ書き出して構文を検査した後に同じファイルシステム内で置き換える。実行中のファイルを直接書き換えると、Bash が読み取りを再開した位置で構文エラーになることがある
+
+収集の失敗 (OAuth 失効やチャンネル単位の取得失敗) は `jkcommentcrawler` 本体が `discord_webhook_url` へ報告する。  
+`JKCommentCrawler.sh` が報告するのは、git の公開など収集の外側で落ちたときだけである。収集が失敗していても、公開が落ちれば別途送る。
+
+`discord_mention_to` があればメンションする。通知に失敗しても収集と公開は続ける。  
+ロック待ちのスキップ (75) は想定どおりの待機なので報告しない。
 
 ## 検証
 

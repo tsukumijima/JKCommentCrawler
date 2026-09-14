@@ -279,6 +279,23 @@ poetry run python -m jkcommentcrawler all 2024/08/05
 > [!NOTE]
 > 収集エラーが発生した場合は、該当ログ内の対象日付と実況チャンネル ID、およびスタックトレースを確認して原因を調査してください。
 
+## Discord への失敗報告
+
+`JKCommentCrawler.ini` に Discord の Incoming Webhook URL を登録すると、収集や公開が予期せず失敗したときに報告が Discord へ届きます。  
+必要に応じて、`discord_mention_to` に自身の Discord ユーザー ID を指定することで、通知時にメンションを飛ばすことも可能です。
+
+```ini
+# 定期実行が失敗したときに報告する Discord の Webhook URL (未指定なら通知は無効)
+discord_webhook_url = https://discord.com/api/webhooks/...
+
+# 通知でメンションする Discord ユーザー ID (省略可)
+discord_mention_to = 123456789012345678
+```
+
+OAuth の失効やチャンネル単位の取得失敗は、収集本体が終了コード 1 を返すタイミングで送ります。  
+Hugging Face への公開など、収集の外側で失敗したときは `JKCommentCrawler.sh` が送ります。  
+ロック待ちのスキップ (終了コード `75`) は報告しません。通知に失敗しても、収集と公開はそのまま続きます。
+
 ## License
 
 [MIT License](License.txt)

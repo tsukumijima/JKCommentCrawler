@@ -37,9 +37,28 @@ START_SECONDS=$SECONDS
 RUN_STAGE=starting
 COLLECTION_EXIT=0
 
-# 終了時に処理段階と終了コードを残す
+# 収集の失敗は本体が報告する。シェルは公開など、収集の外側で落ちたときだけ Discord へ送る
+## 収集が失敗していても、commit / push が落ちた実行は別件として送る
+## 通知に失敗しても元の終了コードは変えない
+notify_publication_failure() {
+    local exit_code=$1
+    if [[ "$exit_code" -eq 0 || "$exit_code" -eq 75 ]]; then
+        return 0
+    fi
+    # 公開成功後に収集の終了コードだけを返す場合は、本体が報告済み
+    if [[ "$RUN_STAGE" = completed || "$RUN_STAGE" = collection ]]; then
+        return 0
+    fi
+    if ! "${SCRIPT_DIR}/.venv/bin/python" -m jkcommentcrawler.notify \
+        --stage "$RUN_STAGE" --exit-code "$exit_code" --log "$RUN_LOG"
+    then
+        echo 'Failed to send Discord notification.'
+    fi
+}
+
 finish_run() {
     local exit_code=$?
+    notify_publication_failure "$exit_code"
     printf '[%s] END mode=%s stage=%s exit_code=%s elapsed_seconds=%s\n' \
         "$(date --iso-8601=seconds)" "$RUN_MODE" "$RUN_STAGE" "$exit_code" "$((SECONDS - START_SECONDS))"
 }
