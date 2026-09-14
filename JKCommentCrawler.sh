@@ -37,20 +37,19 @@ START_SECONDS=$SECONDS
 RUN_STAGE=starting
 COLLECTION_EXIT=0
 
-# 収集の失敗は本体が報告する。シェルは公開など、収集の外側で落ちたときだけ Discord へ送る
-## 収集が失敗していても、commit / push が落ちた実行は別件として送る
-## 通知に失敗しても元の終了コードは変えない
-notify_publication_failure() {
+# 収集や公開の非ゼロ終了を Discord へ報告する
+## 本体が通知処理に到達する前の失敗も報告するため、本体の詳細通知との重複を許容する
+## 通知に失敗した場合も元の終了コードを返す
+notify_run_failure() {
     local exit_code=$1
     if [[ "$exit_code" -eq 0 || "$exit_code" -eq 75 ]]; then
         return 0
     fi
-    # 公開成功後に収集の終了コードだけを返す場合は、本体が報告済み
-    if [[ "$RUN_STAGE" = completed || "$RUN_STAGE" = collection ]]; then
-        return 0
-    fi
-    if ! "${SCRIPT_DIR}/.venv/bin/python" -m jkcommentcrawler.notify \
-        --stage "$RUN_STAGE" --exit-code "$exit_code" --log "$RUN_LOG"
+    # 公開処理で移動した後も、プロジェクトルートから通知モジュールを起動する
+    if ! (
+        cd "$SCRIPT_DIR" && "${SCRIPT_DIR}/.venv/bin/python" -m jkcommentcrawler.notify \
+            --stage "$RUN_STAGE" --exit-code "$exit_code" --log "$RUN_LOG"
+    )
     then
         echo 'Failed to send Discord notification.'
     fi
@@ -58,7 +57,7 @@ notify_publication_failure() {
 
 finish_run() {
     local exit_code=$?
-    notify_publication_failure "$exit_code"
+    notify_run_failure "$exit_code"
     printf '[%s] END mode=%s stage=%s exit_code=%s elapsed_seconds=%s\n' \
         "$(date --iso-8601=seconds)" "$RUN_MODE" "$RUN_STAGE" "$exit_code" "$((SECONDS - START_SECONDS))"
 }
