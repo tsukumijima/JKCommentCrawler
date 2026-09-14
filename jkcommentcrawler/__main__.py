@@ -115,6 +115,8 @@ async def main(
         # 最初の取得が失敗した場合は3回までリトライ
         for retry_count in range(4):
             try:
+                # 取得を省略した番組がある場合は、保存時に既存ログのサイズ保護を適用する
+                nicolive_incomplete = False
                 print(
                     f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
                     f'Retrieve comments broadcast during {target_date.strftime("%Y/%m/%d")}.'
@@ -123,6 +125,7 @@ async def main(
                 # 指定された日付に一部でも放送されたニコニコ生放送番組を取得
                 ## NX-Jikkyo にはあるが本家ニコニコ実況に存在しない実況チャンネル (ex: jk141) では実行しない
                 if oauth_failed is True:
+                    nicolive_incomplete = jikkyo_channel_id in NDGRClient.JIKKYO_CHANNEL_ID_MAP
                     nicolive_program_ids = []
                     print('Skipping retrieval of Nicolive comments as OAuth authentication already failed in this run.')
                 elif jikkyo_channel_id not in NDGRClient.JIKKYO_CHANNEL_ID_MAP:
@@ -176,6 +179,7 @@ async def main(
                             try:
                                 ndgr_comments = await ndgr_client.downloadBackwardComments()
                             except NiconicoProgramEndedError:
+                                nicolive_incomplete = True
                                 unavailable_programs.append(nicolive_program_id)
                                 print(
                                     f'Skipping {nicolive_program_id} as the program is no longer available (PROGRAM_ENDED).'
@@ -188,6 +192,7 @@ async def main(
                         # 再認可が必要な失敗はリトライしても直らないので、残りのニコ生番組は打ち切る
                         ## NX-Jikkyo と他チャンネルは取れるところまで取る
                         oauth_failed = True
+                        nicolive_incomplete = True
                         print(
                             f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
                             'OAuth authentication failed. Continuing NX-Jikkyo retrieval and remaining channels.'
@@ -229,12 +234,15 @@ async def main(
                     # 既存の XML ファイルがあれば文字数を取得
                     existing_length = len(existing_content)
 
+                    # ニコ生の一部を取得できなかった場合は、--force 指定時も長い方のログを残す
+                    allow_force = force and not nicolive_incomplete
+
                     # コメントが1件も取得できていない場合は過去ログを保存しない
                     if len(xml_content) == 0:
                         print(f'Skipping log save for {target_date.strftime("%Y/%m/%d")} as there are 0 comments.')
 
                     # 既存のファイルの方が文字数が多い場合は過去ログを保存しない
-                    elif existing_length > len(xml_content) and not force:
+                    elif existing_length > len(xml_content) and not allow_force:
                         print(
                             f'Skipping log save as the previously retrieved log has more characters. '
                             f'(Previous: {existing_length} chars, Current: {len(xml_content)} chars)'
@@ -243,7 +251,7 @@ async def main(
                     # 過去ログを保存
                     else:
                         # 既存のファイルの方が文字数が多いが、--force が指定されている場合は上書きする
-                        if existing_length > len(xml_content) and force:
+                        if existing_length > len(xml_content) and allow_force:
                             print(
                                 f'The previously retrieved log has more characters, but overwriting as --force is specified. '
                                 f'(Previous: {existing_length} chars, Current: {len(xml_content)} chars)'
