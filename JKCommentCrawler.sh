@@ -11,7 +11,6 @@
 
 # 収集・保存・公開のどこで失敗しても、その終了コードを呼び出し元へ返す
 set -Eeuo pipefail
-umask 077
 
 # 自身のスクリプトのフルパスを取得
 SCRIPT_PATH="$(readlink -f "$0")"
@@ -42,7 +41,7 @@ COLLECTION_EXIT=0
 ## 通知に失敗した場合も元の終了コードを返す
 notify_run_failure() {
     local exit_code=$1
-    if [[ "$exit_code" -eq 0 || "$exit_code" -eq 75 ]]; then
+    if [[ "$exit_code" -eq 0 || "$RUN_STAGE" = skipped ]]; then
         return 0
     fi
     # 公開処理で移動した後も、プロジェクトルートから通知モジュールを起動する
@@ -156,7 +155,9 @@ cd "${SCRIPT_DIR}/kakolog/"
 last_commit_message=$(git log -1 --pretty=%B)
 # 強制終了で残った保存途中の一時ファイルは、コミット対象から外す
 git add -- . ':(exclude,glob)**/.*.nicojk.*' ':(exclude,glob).dataset_structure.json.*'
-if [[ $last_commit_message == *"00:00" ]] || [[ $last_commit_message == *"12:00" ]]; then
+if git diff --cached --quiet; then
+    echo 'No changes to commit. Publishing existing commits.'
+elif [[ $last_commit_message == *"00:00" ]] || [[ $last_commit_message == *"12:00" ]]; then
     git commit -m "Add kakolog until ${current_time}"
 else
     git commit -m "Add kakolog until ${current_time}" --amend --date=now
@@ -176,5 +177,6 @@ else
 fi
 RUN_STAGE=completed
 if [[ "$COLLECTION_EXIT" -ne 0 ]]; then
+    RUN_STAGE=collection
     exit "$COLLECTION_EXIT"
 fi
