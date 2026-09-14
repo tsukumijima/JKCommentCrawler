@@ -70,7 +70,7 @@ def send_discord_report(message: str, run_log: Path | None = None) -> None:
 
 
 def main() -> None:
-    """公開用シェルから、収集の外側で起きた失敗を送る。"""
+    """定期実行用シェルから、収集や公開の失敗を送る。"""
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stage', default='starting')
