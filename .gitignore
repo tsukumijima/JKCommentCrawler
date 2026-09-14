@@ -148,6 +148,9 @@ dmypy.json
 JKCommentCrawler.ini
 cookie.dump
 cookies.json
+oauth.json
+oauth.json.lock
+.wheels/
 log*
 kakolog*
 !.gitkeep

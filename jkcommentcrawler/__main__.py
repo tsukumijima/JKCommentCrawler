@@ -1,13 +1,18 @@
 import asyncio
 import configparser
 import json
+import os
+import tempfile
 import traceback
 from datetime import datetime
+from pathlib import Path
 
 import anyio
 import typer
 from ndgr_client import NDGRClient, XMLCompatibleComment
+from ndgr_client.niconico_oauth import NiconicoOAuthError, NiconicoProgramEndedError
 from ndgr_client.utils import AsyncTyper
+from pydantic import TypeAdapter
 from rich import print
 from rich.rule import Rule
 from rich.style import Style
@@ -39,6 +44,40 @@ async def main(
     verbose: bool = typer.Option(False, '-v', '--verbose', help='詳細なログを表示する。'),
     version: bool = typer.Option(None, '--version', callback=version, is_eager=True, help='バージョン情報を表示する。'),
 ):
+
+    async def write_text_atomically(path: anyio.Path, content: str) -> None:
+        """
+        書き込みを完了した一時ファイルで保存先を置き換える。
+        書き込みの失敗や収集中の読み取りで、既存の過去ログが途中までの内容になるのを防ぐ。
+
+        Args:
+            path (anyio.Path): 保存先のファイルパス
+            content (str): 保存する文字列
+        """
+
+        def write_file() -> None:
+            # 同じファイルシステム内に一時ファイルを作り、書き込みが終わるまで保存先を変更しない
+            output_path = Path(path)
+            mode = output_path.stat().st_mode & 0o777 if output_path.exists() else 0o644
+            temporary_path: Path | None = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    mode='w', encoding='utf-8', dir=output_path.parent, prefix=f'.{output_path.name}.', delete=False
+                ) as temporary_file:
+                    temporary_path = Path(temporary_file.name)
+                    temporary_file.write(content)
+                    temporary_file.flush()
+                    os.fsync(temporary_file.fileno())
+                # ファイルを閉じてから置き換え、既存のアクセス権も引き継ぐ
+                temporary_path.chmod(mode)
+                os.replace(temporary_path, output_path)
+            finally:
+                # 保存に失敗した場合も一時ファイルだけを片付け、既存の過去ログは残す
+                if temporary_path is not None:
+                    temporary_path.unlink(missing_ok=True)
+
+        await anyio.to_thread.run_sync(write_file)
+
     print(Rule(characters='=', style=Style(color='#E33157')))
     target_date = datetime.strptime(date, '%Y/%m/%d').date()
     if target_date > datetime.now().date():
@@ -51,8 +90,13 @@ async def main(
     config = configparser.ConfigParser()
     config.read(config_ini, encoding='utf-8')
     kakolog_dir: anyio.Path = await anyio.Path(config.get('Default', 'jkcomment_folder').rstrip('/')).resolve()
-    niconico_mail: str = config.get('Default', 'nicologin_mail')
-    niconico_password: str = config.get('Default', 'nicologin_password')
+    # 認証方式は oauth または cookie の2択で、認証ファイルのパスはプロジェクトルートに固定する
+    auth_method = config.get('Default', 'auth_method', fallback='oauth').strip().lower()
+    if auth_method not in ('oauth', 'cookie'):
+        raise ValueError(f"Invalid auth_method: '{auth_method}'. Must be 'oauth' or 'cookie'.")
+    base_dir = Path(__file__).resolve().parent.parent
+    niconico_oauth_file = base_dir / 'oauth.json' if auth_method == 'oauth' else None
+    niconico_cookies_file = base_dir / 'cookies.json' if auth_method == 'cookie' else None
 
     # jikkyo_id に 'all' が指定された場合は全てのチャンネルをダウンロード
     if channel_id == 'all':
@@ -62,6 +106,10 @@ async def main(
 
     # 過去ログ収集対象のニコニコ実況チャンネルごとに
     comment_counts: dict[str, int] = {}
+    failed_channels: list[str] = []
+    unavailable_programs: list[str] = []
+    # この実行の中だけで覚え、再認可が必要な OAuth 失敗を残りのニコ生番組へ繰り返さない
+    oauth_failed = False
     for jikkyo_channel_id in jikkyo_channel_ids:
         # 最初の取得が失敗した場合は3回までリトライ
         for retry_count in range(4):
@@ -73,7 +121,10 @@ async def main(
 
                 # 指定された日付に一部でも放送されたニコニコ生放送番組を取得
                 ## NX-Jikkyo にはあるが本家ニコニコ実況に存在しない実況チャンネル (ex: jk141) では実行しない
-                if jikkyo_channel_id not in NDGRClient.JIKKYO_CHANNEL_ID_MAP:
+                if oauth_failed is True:
+                    nicolive_program_ids = []
+                    print('Skipping retrieval of Nicolive comments as OAuth authentication already failed in this run.')
+                elif jikkyo_channel_id not in NDGRClient.JIKKYO_CHANNEL_ID_MAP:
                     nicolive_program_ids = []
                     print(
                         f'Skipping retrieval of Nicolive comments as the channel {jikkyo_channel_id} does not exist on Nicolive.'
@@ -98,37 +149,49 @@ async def main(
 
                 # ニコニコ生放送番組 ID ごとに
                 for nicolive_program_id in nicolive_program_ids:
-                    # NDGRClient を初期化
-                    async with NDGRClient(nicolive_program_id, verbose=verbose, console_output=True) as ndgr_client:
-                        # ニコニコアカウントにログイン (タイムシフト再生に必要)
-                        ## すでにログイン済みの Cookie が cookies.json にあれば Cookie を再利用し、ない場合は新規ログインを行う
-                        cookies_json = anyio.Path(__file__).parent.parent / 'cookies.json'
-                        if await cookies_json.exists():
-                            async with await cookies_json.open(encoding='utf-8') as f:
-                                cookies_dict = json.loads(await f.read())
-                            cookies_dict = await ndgr_client.login(cookies=cookies_dict)
-                            # もし None が返る場合はログインセッションが切れた可能性が高いので、メールアドレスとパスワードを指定して再ログインを実行
-                            if cookies_dict is None:
-                                cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
-                                if cookies_dict is None:
-                                    raise Exception('Failed to login to niconico.')
-                                async with await cookies_json.open('w', encoding='utf-8') as f:
-                                    await f.write(json.dumps(cookies_dict))
-                        else:
-                            # cookies.json が存在しない場合は新規ログインを実行
-                            cookies_dict = await ndgr_client.login(mail=niconico_mail, password=niconico_password)
-                            if cookies_dict is None:
-                                raise Exception('Failed to login to niconico.')
-                            async with await cookies_json.open('w', encoding='utf-8') as f:
-                                await f.write(json.dumps(cookies_dict))
+                    try:
+                        # NDGRClient を初期化
+                        async with NDGRClient(
+                            nicolive_program_id, verbose=verbose, console_output=True, oauth_file=niconico_oauth_file
+                        ) as ndgr_client:
+                            # OAuth のトークン更新と保存は NDGRClient が行うため、ここでは Cookie 認証を選んだ場合の設定を行う
+                            if auth_method == 'cookie':
+                                assert niconico_cookies_file is not None
+                                if not niconico_cookies_file.exists():
+                                    raise FileNotFoundError(
+                                        f'{niconico_cookies_file.name} not found. Place it in the project root.'
+                                    )
+                                cookies_dict = TypeAdapter(dict[str, str]).validate_json(
+                                    await anyio.Path(niconico_cookies_file).read_text(encoding='utf-8')
+                                )
+                                if await ndgr_client.setCookies(cookies_dict) is False:
+                                    raise ValueError(
+                                        'The saved cookies have expired. Import fresh cookies or use OAuth.'
+                                    )
 
-                        # コメントをダウンロードしてリストに追加
-                        comments.extend(
-                            [
-                                NDGRClient.convertToXMLCompatibleComment(comment)
-                                for comment in await ndgr_client.downloadBackwardComments()
-                            ]
+                            # コメントをダウンロードしてリストに追加
+                            ## タイムシフトの公開期間を過ぎた番組は OAuth の視聴 API が PROGRAM_ENDED を返すため、
+                            ## その番組だけを取得対象から外し、同じ日の他の番組と NX-Jikkyo の収集は続行する
+                            try:
+                                ndgr_comments = await ndgr_client.downloadBackwardComments()
+                            except NiconicoProgramEndedError:
+                                unavailable_programs.append(nicolive_program_id)
+                                print(
+                                    f'Skipping {nicolive_program_id} as the program is no longer available (PROGRAM_ENDED).'
+                                )
+                                continue
+                            comments.extend(
+                                [NDGRClient.convertToXMLCompatibleComment(comment) for comment in ndgr_comments]
+                            )
+                    except NiconicoOAuthError:
+                        # 再認可が必要な失敗はリトライしても直らないので、残りのニコ生番組は打ち切る
+                        ## NX-Jikkyo と他チャンネルは取れるところまで取る
+                        oauth_failed = True
+                        print(
+                            f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
+                            'OAuth authentication failed. Continuing NX-Jikkyo retrieval and remaining channels.'
                         )
+                        break
 
                 # NX-Jikkyo スレッドごとに
                 for nx_thread_id in nx_thread_ids:
@@ -146,7 +209,6 @@ async def main(
                 ]
                 print(f'Excluding comments posted on dates other than {target_date.strftime("%Y/%m/%d")} ...')
                 print(f'Final comments for {jikkyo_channel_id}: {len(comments)}')
-                comment_counts[jikkyo_channel_id] = len(comments)
 
                 # コメント投稿日時昇順で並び替え
                 ## ニコニコ実況と NX-Jikkyo のコメントを時系列でマージするためにこの処理が必要
@@ -154,20 +216,17 @@ async def main(
 
                 # {kakolog_dir}/{jikkyo_channel_id}/{date.year}/{date.strftime('%Y%m%d')}.nicojk に保存
                 ## 取得できたコメントが1つもない場合は実行しない
+                output_dir = kakolog_dir / jikkyo_channel_id / str(target_date.year)
+                output_file = output_dir / f'{target_date.strftime("%Y%m%d")}.nicojk'
+                existing_content = await output_file.read_text(encoding='utf-8') if await output_file.exists() else ''
                 if len(comments) > 0:
-                    output_dir = kakolog_dir / jikkyo_channel_id / str(target_date.year)
                     await output_dir.mkdir(parents=True, exist_ok=True)
-                    output_file = output_dir / f'{target_date.strftime("%Y%m%d")}.nicojk'
 
                     # コメントリストを XML 文字列に変換
                     xml_content = NDGRClient.convertToXMLString(comments)
 
                     # 既存の XML ファイルがあれば文字数を取得
-                    if await output_file.exists():
-                        async with await output_file.open(encoding='utf-8') as f:
-                            existing_length = len(await f.read())
-                    else:
-                        existing_length = 0
+                    existing_length = len(existing_content)
 
                     # コメントが1件も取得できていない場合は過去ログを保存しない
                     if len(xml_content) == 0:
@@ -189,8 +248,7 @@ async def main(
                                 f'(Previous: {existing_length} chars, Current: {len(xml_content)} chars)'
                             )
                         # ファイルに書き込む
-                        async with await output_file.open('w', encoding='utf-8') as f:
-                            await f.write(xml_content)
+                        await write_text_atomically(output_file, xml_content)
                         print(f'Log saved to {output_file}.')
 
                 # コメントが1件も取得できていない場合はスキップ
@@ -200,6 +258,8 @@ async def main(
                     )
                 print(Rule(characters='=', style=Style(color='#E33157')))
 
+                # 保存まで完了したチャンネルだけを成功として記録する
+                comment_counts[jikkyo_channel_id] = len(comments)
                 # 正常にダウンロードできたらループを抜ける
                 break
 
@@ -214,6 +274,7 @@ async def main(
                     await asyncio.sleep(3)
                 else:
                     # リトライ失敗、このチャンネルはスキップして次の実況チャンネルへ
+                    failed_channels.append(jikkyo_channel_id)
                     print(
                         f'[{datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")}]\\[{jikkyo_channel_id}] '
                         f'Unexpected error occurred. Retrying failed. Skipping ...'
@@ -223,7 +284,7 @@ async def main(
 
     # 全チャンネルをダウンロードしたときは、各チャンネルごとの合計コメント数を表示
     if channel_id == 'all':
-        print('Download completed for all channels.')
+        print(f'Download finished: {len(comment_counts)} succeeded, {len(failed_channels)} failed.')
         for jikkyo_channel_id, count in comment_counts.items():
             print(f'{jikkyo_channel_id:>5}: {count:>5} comments')
         print(Rule(characters='=', style=Style(color='#E33157')))
@@ -240,6 +301,9 @@ async def main(
             # anyio.Path.iterdir() は非同期イテレータを返すため、リスト内包表記で収集してからソートする
             items = sorted([item async for item in directory_path.iterdir()])
             for item in items:
+                # 保存途中の一時ファイルや Git の管理情報は公開用の一覧に含めない
+                if item.name.startswith('.'):
+                    continue
                 if await item.is_dir() and (item.name.startswith('jk') or nest is True):
                     data[item.name] = await get_directory_contents(item, nest=True)
                 elif await item.is_file() and nest is True:
@@ -248,10 +312,21 @@ async def main(
 
         dataset_structure = await get_directory_contents(kakolog_dir)
         dataset_structure_file = kakolog_dir / 'dataset_structure.json'
-        async with await dataset_structure_file.open('w', encoding='utf-8') as f:
-            await f.write(json.dumps(dataset_structure, ensure_ascii=False, indent=4))
+        await write_text_atomically(dataset_structure_file, json.dumps(dataset_structure, ensure_ascii=False, indent=4))
         print(f'Dataset structure saved to {dataset_structure_file}.')
         print(Rule(characters='=', style=Style(color='#E33157')))
+
+    # 取得期限を過ぎた番組も最終結果に残し、部分的な取得を見落とさないようにする
+    if unavailable_programs:
+        print(f'Unavailable programs (PROGRAM_ENDED): {", ".join(dict.fromkeys(unavailable_programs))}')
+
+    # 他のチャンネルの収集を終えてから失敗を返し、cron 側で正常完了と区別できるようにする
+    if oauth_failed is True:
+        print('OAuth authentication failed. Run the NDGRClient authorize command again.')
+    if failed_channels:
+        print(f'Download failed for channels: {", ".join(failed_channels)}')
+    if oauth_failed is True or failed_channels:
+        raise typer.Exit(code=1)
 
 
 if __name__ == '__main__':

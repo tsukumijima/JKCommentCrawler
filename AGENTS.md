@@ -32,8 +32,9 @@ poetry run task format    # ruff format .
 
 ## この本番環境の依存関係と認証
 
-認証情報は `JKCommentCrawler.ini` の `niconico_oauth_file` で指定する `oauth.json` (Git 管理外) にあり、トークンの更新・保存は NDGRClient が行う。  
-OAuth の失効 (再認可が必要な状態) は `NiconicoOAuthError` として収集全体を停止させ、`log/minutes.error.log` と終了コードで検知する。復旧は NDGRClient の `authorize` コマンドで `oauth.json` を作り直す。  
+認証情報は `JKCommentCrawler.ini` の `auth_method` で指定する認証方式 (`oauth` / `cookie`) に応じて、プロジェクトルートの `oauth.json` または `cookies.json` (いずれも Git 管理外) を参照する。  
+OAuth トークンの更新・保存は NDGRClient が自動で行う。  
+OAuth の失効 (再認可が必要な状態) は `NiconicoOAuthError` として、残りのニコニコ生放送の番組を同じ実行では集めずに NX-Jikkyo と他チャンネルの収集へ進める。復旧は NDGRClient の `authorize` コマンドで `oauth.json` を作り直す。  
 `cookies.json` と ini 内の旧ログイン情報は使用していない。
 
 ## ディレクトリ構成
