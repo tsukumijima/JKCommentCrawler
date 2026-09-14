@@ -22,7 +22,7 @@ def send_discord_report(message: str, run_log: Path | None = None) -> None:
         run_log (Path | None): 添える実行ログ (省略可)
     """
 
-    # Git 管理外の ini から Webhook を読む
+    # JKCommentCrawler.ini から Webhook URL を取得
     config = configparser.ConfigParser(interpolation=None)
     config.read(ROOT / 'JKCommentCrawler.ini', encoding='utf-8')
     webhook_url = config.get('Default', 'discord_webhook_url', fallback='').strip()
