@@ -36,7 +36,7 @@ START_SECONDS=$SECONDS
 RUN_STAGE=starting
 COLLECTION_EXIT=0
 
-# 終了要求から30秒後には、応答しない子プロセスも含めて強制終了する
+# SIGTERM 送信から30秒後には、応答しない子プロセスも含めて強制終了する
 ## 親コマンドが先に終了しても、監視用シェルを残して timeout の強制終了を有効にする
 run_with_timeout() {
     local time_limit=$1
@@ -45,7 +45,7 @@ run_with_timeout() {
     timeout --verbose --kill-after=30s "$time_limit" \
         bash -c 'trap "sleep infinity" TERM; "$@" & wait "$!"' bash "$@" &
     local timeout_pid=$!
-    # 手動の中断でも子プロセスへ終了要求を送り、停止を待ってからロックを解放する
+    # 手動の中断や SIGTERM 受信時でも子プロセスへ SIGTERM を転送し、停止を待ってからロックを解放する
     trap 'trap "" INT TERM; kill -TERM "$timeout_pid" || true; wait "$timeout_pid" || true; exit 130' INT
     trap 'trap "" INT TERM; kill -TERM "$timeout_pid" || true; wait "$timeout_pid" || true; exit 143' TERM
     wait "$timeout_pid" || command_exit=$?
@@ -134,7 +134,7 @@ RUN_STAGE=collection
 # JKCommentCrawler を実行
 # 一部チャンネルの失敗でも保存できた分は公開する
 ## 通信ライブラリが応答を返さなくても、30分で収集を終了して保存済みログの公開へ進む
-## timeout は子プロセスにも終了要求を送り、30秒後にグループ全体を強制終了する
+## timeout は子プロセスにも SIGTERM を送り、30秒後にグループ全体を強制終了する
 # Cron（5分ごと）
 if [[ $RUN_MODE = 'cron_minutes' ]]; then
 
