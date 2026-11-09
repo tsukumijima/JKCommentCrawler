@@ -2,11 +2,12 @@
 
 import argparse
 import configparser
-import json
 import socket
-import urllib.error
-import urllib.request
 from pathlib import Path
+
+import curl_cffi.requests as requests
+
+from jkcommentcrawler import NXClient
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -42,30 +43,24 @@ def send_discord_report(message: str, run_log: Path | None = None) -> None:
 
     # wait=true で Discord 側の保存完了を確認する
     # https://docs.discord.com/developers/resources/webhook#execute-webhook
-    separator = '&' if '?' in webhook_url else '?'
-    request = urllib.request.Request(
-        f'{webhook_url}{separator}wait=true',
-        data=json.dumps(
-            {
+    try:
+        response = requests.post(
+            webhook_url,
+            params={'wait': 'true'},
+            headers={'User-Agent': NXClient.USER_AGENT},
+            json={
                 'username': 'JKCommentCrawler',
                 'content': content[:1900],
                 'allowed_mentions': {'parse': [], 'users': [mention_to] if mention_to else []},
-            }
-        ).encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST',
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=15) as response:
-            if response.status != 200:
-                raise RuntimeError(f'Discord notification failed. HTTP status: {response.status}')
-    except urllib.error.HTTPError as ex:
+            },
+            timeout=15,
+        )
+    except requests.RequestsError as ex:
+        # 例外の文言には Webhook の URL が含まれるため、例外の種類だけを残す
+        raise RuntimeError(f'Discord notification failed during transport. Reason: {type(ex).__name__}') from None
+    if response.status_code != 200:
         # 応答本文や URL には Webhook の秘密が含まれるため、状態コードだけを残す
-        raise RuntimeError(f'Discord notification failed. HTTP status: {ex.code}') from None
-    except urllib.error.URLError as ex:
-        raise RuntimeError(
-            f'Discord notification failed during transport. Reason: {type(ex.reason).__name__}'
-        ) from None
+        raise RuntimeError(f'Discord notification failed. HTTP status: {response.status_code}')
     print('Discord notification sent.')
 
 
