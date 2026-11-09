@@ -36,6 +36,24 @@ START_SECONDS=$SECONDS
 RUN_STAGE=starting
 COLLECTION_EXIT=0
 
+# 終了要求から30秒後には、応答しない子プロセスも含めて強制終了する
+## 親コマンドが先に終了しても、監視用シェルを残して timeout の強制終了を有効にする
+run_with_timeout() {
+    local time_limit=$1
+    local command_exit=0
+    shift
+    timeout --verbose --kill-after=30s "$time_limit" \
+        bash -c 'trap "sleep infinity" TERM; "$@" & wait "$!"' bash "$@" &
+    local timeout_pid=$!
+    # 手動の中断でも子プロセスへ終了要求を送り、停止を待ってからロックを解放する
+    trap 'trap "" INT TERM; kill -TERM "$timeout_pid" || true; wait "$timeout_pid" || true; exit 130' INT
+    trap 'trap "" INT TERM; kill -TERM "$timeout_pid" || true; wait "$timeout_pid" || true; exit 143' TERM
+    wait "$timeout_pid" || command_exit=$?
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    return "$command_exit"
+}
+
 # 収集や公開の非ゼロ終了を Discord へ報告する
 ## 本体が通知処理に到達する前の失敗も報告するため、本体の詳細通知との重複を許容する
 ## 通知に失敗した場合も元の終了コードを返す
@@ -46,7 +64,7 @@ notify_run_failure() {
     fi
     # 公開処理で移動した後も、プロジェクトルートから通知モジュールを起動する
     if ! (
-        cd "$SCRIPT_DIR" && "${SCRIPT_DIR}/.venv/bin/python" -m jkcommentcrawler.notify \
+        cd "$SCRIPT_DIR" && run_with_timeout 30s "${SCRIPT_DIR}/.venv/bin/python" -m jkcommentcrawler.notify \
             --stage "$RUN_STAGE" --exit-code "$exit_code" --log "$RUN_LOG"
     )
     then
@@ -115,12 +133,14 @@ RUN_STAGE=collection
 
 # JKCommentCrawler を実行
 # 一部チャンネルの失敗でも保存できた分は公開する
+## 通信ライブラリが応答を返さなくても、30分で収集を終了して保存済みログの公開へ進む
+## timeout は子プロセスにも終了要求を送り、30秒後にグループ全体を強制終了する
 # Cron（5分ごと）
 if [[ $RUN_MODE = 'cron_minutes' ]]; then
 
     # 今日分の JKCommentCrawler を実行
     echo 'JKCommentCrawler.sh (Cron minutes)'
-    "${SCRIPT_DIR}/.venv/bin/python" -u -m jkcommentcrawler all "$(date +%Y/%m/%d)" --save-dataset-structure-json \
+    run_with_timeout 30m "${SCRIPT_DIR}/.venv/bin/python" -u -m jkcommentcrawler all "$(date +%Y/%m/%d)" --save-dataset-structure-json \
         || COLLECTION_EXIT=$?
 
 # Cron（1日ごと）
@@ -131,13 +151,13 @@ elif [[ $RUN_MODE = 'cron_daily' ]]; then
     ## ニコ生の実況番組の放送終了後にスパム判定されたコメント (特に AA) がごっそり削除されることがあり、
     ## それによって新しいログが保存されなくなる事態を避ける
     echo 'JKCommentCrawler.sh (Cron daily)'
-    "${SCRIPT_DIR}/.venv/bin/python" -u -m jkcommentcrawler all "$(date -d '-1 day' +%Y/%m/%d)" --save-dataset-structure-json --force \
+    run_with_timeout 30m "${SCRIPT_DIR}/.venv/bin/python" -u -m jkcommentcrawler all "$(date -d '-1 day' +%Y/%m/%d)" --save-dataset-structure-json --force \
         || COLLECTION_EXIT=$?
 
 # 通常実行
 else
     echo 'JKCommentCrawler.sh (Normal)'
-    "${SCRIPT_DIR}/.venv/bin/python" -u -m jkcommentcrawler all "$(date +%Y/%m/%d)" --save-dataset-structure-json \
+    run_with_timeout 30m "${SCRIPT_DIR}/.venv/bin/python" -u -m jkcommentcrawler all "$(date +%Y/%m/%d)" --save-dataset-structure-json \
         || COLLECTION_EXIT=$?
 fi
 if [[ "$COLLECTION_EXIT" -eq 0 ]]; then
@@ -154,26 +174,29 @@ RUN_STAGE=commit
 cd "${SCRIPT_DIR}/kakolog/"
 last_commit_message=$(git log -1 --pretty=%B)
 # 強制終了で残った保存途中の一時ファイルは、コミット対象から外す
-git add -- . ':(exclude,glob)**/.*.nicojk.*' ':(exclude,glob).dataset_structure.json.*'
+## LFS フィルターやフックの待機が続く場合も、各コマンドを5分で終了してロックを解放する
+run_with_timeout 5m git add -- . ':(exclude,glob)**/.*.nicojk.*' ':(exclude,glob).dataset_structure.json.*'
 if git diff --cached --quiet; then
     echo 'No changes to commit. Publishing existing commits.'
 elif [[ $last_commit_message == *"00:00" ]] || [[ $last_commit_message == *"12:00" ]]; then
-    git commit -m "Add kakolog until ${current_time}"
+    run_with_timeout 5m git commit -m "Add kakolog until ${current_time}"
 else
-    git commit -m "Add kakolog until ${current_time}" --amend --date=now
+    run_with_timeout 5m git commit -m "Add kakolog until ${current_time}" --amend --date=now
 fi
 # Hugging Face への push が完了した場合だけ、ローカルの LFS キャッシュを削除する
 ## この作業ディレクトリでは過去バージョンをローカルで checkout しないため、
 ## LFS オブジェクトはリモートに送信済みなら都度ダウンロードできる履歴として扱う
 RUN_STAGE=push
-if git push -f; then
+# git-lfs と転送エージェントを含めて10分に制限し、失敗時は次の cron で再公開する
+if run_with_timeout 10m git push -f; then
     # 現在 checkout 中のファイルに対応する LFS キャッシュも削除対象に含める
     ## 作業ツリー上の .nicojk 実ファイルは残るため、ローカルバックアップとしての役割は維持される
     RUN_STAGE=lfs_prune
-    git lfs prune --force
+    run_with_timeout 5m git lfs prune --force
 else
+    push_exit=$?
     echo 'Failed to push kakolog to Hugging Face.'
-    exit 1
+    exit "$push_exit"
 fi
 RUN_STAGE=completed
 if [[ "$COLLECTION_EXIT" -ne 0 ]]; then
