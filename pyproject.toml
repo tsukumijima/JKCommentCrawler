@@ -2,17 +2,17 @@
 name = "JKCommentCrawler"
 package-mode = false
 
-[tool.taskipy.tasks]
-lint = "ruff check --fix ."
-format = "ruff format ."
-
 [tool.poetry.dependencies]
 python = ">=3.11,<3.12"
 ndgr-client = { git = "https://github.com/tsukumijima/NDGRClient", rev = "b7385e5f1949d1840cdcbc2a687efd560c503e9d" }
 
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.9.1"
-taskipy = ">=1.13.0"
+taskipy = ">=1.14.1"
+
+[tool.taskipy.tasks]
+lint = "ruff check --fix ."
+format = "ruff format ."
 
 [build-system]
 requires = ["poetry-core"]
